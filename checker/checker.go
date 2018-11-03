@@ -22,6 +22,11 @@ type HashRes struct {
 	Hash     string
 }
 
+type FileCheckerPath struct {
+	Path  string
+	Skips map[string]bool
+}
+
 // List directories and files with their hashes.
 func (fc FileChecker) List(root string, skips map[string]bool) (hr []HashRes, err error) {
 	// TODO mora postojati skip dir lista
