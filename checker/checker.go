@@ -2,6 +2,7 @@ package checker
 
 import (
 	"crypto/md5"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -11,77 +12,93 @@ import (
 
 // Checker types which implement different types of checks.
 type Checker interface {
-	// Gather info about the relevant state of the system.
+	// Gather info about the relevant state of the system. (async)
 	Collect(config map[string]string)
 	// Compare two string lines of system state.
 	Compare(a, b string) (int, error)
+	// Get current progress of the collection.
 	Progress() float64
+	// Fetch the collected system state info.
 	GetCollected() ([]string, error)
+	// Get error if any has occured during collection.
+	GetErr() error
+}
+
+type BasicChecker struct {
+	// Tracks progress of the collection operation, since some can take a while.
+	progress float64
+	// Collected state of the system
+	collected []string
+	err       error
 }
 
 // FileChecker collects files under a given path. It can get their size and/or
 // calculate md5 hash for each of them. Also paths that should be excluded from
 // results can be specified in the config map for Collect function.
 type FileChecker struct {
-	// Tracks progress of the collection operation, since some can take a while.
-	progress float64
-	// Collected state of the system
-	collected []string
+	BasicChecker
 }
 
-// Collects state of all files and dirs under a given path.
+// Collect state of all files and dirs under a given path.
 // Configuration expects path as the target under which to search, list
-// of directories/or files to skip (column separated string), size flag
-// to collect file sizes, and hash flag to calculate file hashes.
-// Returns list of strings containg dir/file full name, and optionally size or
+// of directories/or files to skip (column separated string), and
+// hash flag to calculate file hashes.
+// Returns list of strings containg dir/file full name, size or
 // hash, comma separated.
 func (fc *FileChecker) Collect(config map[string]string) {
-	skips := strings.Split(config["skips"], ":")
-	collectSize := config["size"] == "true" || config["size"] == "yes"
+	skipPaths := strings.Split(config["skips"], ":")
 	collectHash := config["hash"] == "true" || config["hash"] == "yes"
 	targetPath := config["path"]
-	// TODO create skip map
-}
-
-type HashRes struct {
-	FileName string
-	Hash     string
-	Size     int64
-}
-
-type FileCheckerPath struct {
-	Path        string
-	Skips       map[string]bool
-	SkipHashing bool //just size checking
-}
-
-// List directories and files with their hashes.
-func (fc FileChecker) List(root string, skips map[string]bool) (hr []HashRes, err error) {
-	// TODO mora postojati skip dir lista
-	err = filepath.Walk(root, func(path string, info os.FileInfo, err0 error) error {
+	// create skip map
+	skips := make(map[string]bool)
+	for _, dir := range skipPaths {
+		skips[dir] = true
+	}
+	fc.err = filepath.Walk(targetPath, func(path string, info os.FileInfo, err0 error) error {
 		if info.IsDir() {
 			if skips[path] {
 				return filepath.SkipDir
 			}
-			hr = append(hr, HashRes{FileName: path})
+			fc.collected = append(fc.collected, path)
+			fc.progress += 1.0
 		} else {
-			f, err2 := os.Open(path)
-			if err2 != nil {
-				return err2
+			var recline string
+			if skips[path] {
+				return nil
 			}
-			defer f.Close()
-			h := md5.New()
-			if _, err3 := io.Copy(h, f); err3 != nil {
-				log.Fatal(err3)
+			if collectHash {
+				f, err2 := os.Open(path)
+				if err2 != nil {
+					// TODO sta sa greskom?
+					return err2
+				}
+				defer f.Close()
+				h := md5.New()
+				if _, err3 := io.Copy(h, f); err3 != nil {
+					log.Fatal(err3) // TODO jel ovo ok?
+				}
+				recline = fmt.Sprintf("%s,%d,%s", path, info.Size(), string(h.Sum(nil)))
+			} else {
+				recline = fmt.Sprintf("%s,%d", path, info.Size())
 			}
-			hr = append(hr, HashRes{FileName: path, Hash: string(h.Sum(nil))})
+			fc.collected = append(fc.collected, recline)
 		}
 		return nil
 	})
-	return hr, err
+}
+
+func (fc *FileChecker) Progress() float64 {
+	return 0.0
+}
+
+func (fc *FileChecker) Compare(a, b string) (int, error) {
+
+}
+
+func (fc *FileChecker) GetError() error {
+	return fc.err
 }
 
 type ACLChecker struct {
-	progress  float64
-	collected []string
+	BasicChecker
 }

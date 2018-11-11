@@ -3,7 +3,6 @@ package main
 import (
 	"drift/checker"
 
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -44,15 +43,15 @@ func startClient() {
 
 func getFileChecker(w http.ResponseWriter, r *http.Request) {
 	// TODO fill exclusion map from request params
-	skips := make(map[string]bool)
-	hrs, err := fc.List("/", skips)
-	if err != nil {
-		log.Fatal(err)
-	}
-	data, err := json.Marshal(hrs)
-	if err != nil {
-		log.Fatal(err)
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(data)
+	// skips := make(map[string]bool)
+	// hrs, err := fc.List("/", skips)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// data, err := json.Marshal(hrs)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// w.Header().Set("Content-Type", "application/json")
+	// w.Write(data)
 }
