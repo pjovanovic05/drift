@@ -23,19 +23,16 @@ func main() {
 	flag.Parse()
 
 	if *isServer {
-		router := mux.NewRouter()
-		router.HandleFunc("/checkers/FileChecker", getFileChecker).Methods("GET")
-		log.Fatal(http.ListenAndServe(":8000", router))
+		startServer()
 	} else {
-		// TODO get server addresses and passwords
-		// TODO connect and gather info from checkers
-		// TODO calculate differences
-		// TODO show diffs...
+		startClient()
 	}
 }
 
 func startServer() {
-
+	router := mux.NewRouter()
+	router.HandleFunc("/checkers/FileChecker", getFileChecker).Methods("GET")
+	log.Fatal(http.ListenAndServe(":8000", router))
 }
 
 func startClient() {
