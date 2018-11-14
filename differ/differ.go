@@ -1,6 +1,11 @@
 package differ
 
-import "drift/checker"
+import (
+	"drift/checker"
+	"html/template"
+	"log"
+	"os"
+)
 
 type DiffType int
 
@@ -61,3 +66,20 @@ func LoadDiffs(location string) ([]DiffLine, error) {
 func SaveDiffsForVim(loc string, x, y []checker.Pair) error {
 
 }
+
+func SaveHTMLReport(location string, diffs []DiffLine) error {
+	// TODO make template
+	var diffReport = template.Must(template.New("diffreport").Parse(reportTemplate))
+	// TODO populate template
+	out, err := os.Create(location)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = diffReport.Execute(os.Stdout, diffs)
+	// TODO write to file
+	return err
+}
+
+var reportTemplate = `
+<h1>diff report</h1>
+`

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 )
 
 // Pair is a key-value pair to hold intermediate state collection results.
@@ -46,6 +47,7 @@ type BasicChecker struct {
 // results can be specified in the config map for Collect function.
 type FileChecker struct {
 	BasicChecker
+	mu sync.Mutex //protects progress and collected
 }
 
 // Collect state of all files and dirs under a given path.
@@ -68,8 +70,10 @@ func (fc *FileChecker) Collect(config map[string]string) {
 			if skips[path] {
 				return filepath.SkipDir
 			}
+			fc.mu.Lock()
 			fc.collected = append(fc.collected, Pair{Key: path, Value: "DIR"})
 			fc.progress = "checking: " + path
+			fc.mu.Unlock()
 		} else {
 			var recline string
 			if skips[path] {
@@ -90,7 +94,9 @@ func (fc *FileChecker) Collect(config map[string]string) {
 			} else {
 				recline = fmt.Sprintf("%d", info.Size())
 			}
+			fc.mu.Lock()
 			fc.collected = append(fc.collected, Pair{Key: path, Value: recline})
+			fc.mu.Unlock()
 		}
 		return nil
 	})
@@ -101,6 +107,8 @@ func (fc *FileChecker) Collect(config map[string]string) {
 }
 
 func (fc *FileChecker) Progress() string {
+	fc.mu.Lock()
+	defer fc.mu.Unlock()
 	return fc.progress
 }
 
