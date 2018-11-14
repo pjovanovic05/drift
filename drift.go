@@ -2,6 +2,7 @@ package main
 
 import (
 	"drift/checker"
+	"net"
 
 	"flag"
 	"fmt"
@@ -9,10 +10,19 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/zserge/webview"
 )
 
 var (
 	fc checker.FileChecker
+)
+
+var (
+	// client stuff
+	target1 string
+	target2 string
+	t1fccfg string
+	t2fccfg string
 )
 
 func main() {
@@ -30,18 +40,29 @@ func main() {
 
 func startServer() {
 	router := mux.NewRouter()
-	router.HandleFunc("/checkers/FileChecker", getFileChecker).Methods("GET")
+	router.HandleFunc("/checkers/FileChecker/start", startFileChecker).Methods("GET") // TODO: ovo je mozda bolje da bude put ili post
+	router.HandleFunc("/checkers/FileChecker/status", getFCStatus).Methods("GET")
+	router.HandleFunc("/checkers/FileChecker/results", getFCResults).Methods("GET")
 	log.Fatal(http.ListenAndServe(":8000", router))
 }
 
 func startClient() {
-	// TODO get server addresses and passwords
-	// TODO connect and gather info from checkers
-	// TODO calculate differences
-	// TODO show diffs...
+	router := mux.NewRouter()
+	// TODO setup router
+	router.PathPrefix("/").Handler(http.FileServer(http.Dir("./clientui"))) //TODO assetFS
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer ln.Close()
+	go func() {
+		log.Fatal(http.Serve(ln, router))
+	}()
+	webview.Open("Drift v0.1", "http://"+ln.Addr().String()+"/index.html", 800, 600, true)
 }
 
-func getFileChecker(w http.ResponseWriter, r *http.Request) {
+func startFileChecker(w http.ResponseWriter, r *http.Request) {
 	// TODO fill exclusion map from request params
 	// skips := make(map[string]bool)
 	// hrs, err := fc.List("/", skips)
@@ -54,4 +75,12 @@ func getFileChecker(w http.ResponseWriter, r *http.Request) {
 	// }
 	// w.Header().Set("Content-Type", "application/json")
 	// w.Write(data)
+}
+
+func getFCStatus(w http.ResponseWriter, r *http.Request) {
+	// TODO
+}
+
+func getFCResults(w http.ResponseWriter, r *http.Request) {
+	// TODO:
 }

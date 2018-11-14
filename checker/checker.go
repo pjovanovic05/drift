@@ -7,28 +7,37 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
+
+// Pair is a key-value pair to hold intermediate state collection results.
+type Pair struct {
+	Key   string
+	Value string
+}
+
+func (p Pair) String() string {
+	return p.Key + ":" + p.Value
+}
 
 // Checker types which implement different types of checks.
 type Checker interface {
 	// Gather info about the relevant state of the system. (async)
 	Collect(config map[string]string)
-	// Compare two string lines of system state.
-	Compare(a, b string) (int, error)
 	// Get current progress of the collection.
-	Progress() float64
+	Progress() string
 	// Fetch the collected system state info.
-	GetCollected() ([]string, error)
+	GetCollected() ([]Pair, error)
 	// Get error if any has occured during collection.
 	GetErr() error
 }
 
 type BasicChecker struct {
 	// Tracks progress of the collection operation, since some can take a while.
-	progress float64
+	progress string
 	// Collected state of the system
-	collected []string
+	collected []Pair
 	err       error
 }
 
@@ -59,8 +68,8 @@ func (fc *FileChecker) Collect(config map[string]string) {
 			if skips[path] {
 				return filepath.SkipDir
 			}
-			fc.collected = append(fc.collected, path)
-			fc.progress += 1.0
+			fc.collected = append(fc.collected, Pair{Key: path, Value: "DIR"})
+			fc.progress = "checking: " + path
 		} else {
 			var recline string
 			if skips[path] {
@@ -77,28 +86,36 @@ func (fc *FileChecker) Collect(config map[string]string) {
 				if _, err3 := io.Copy(h, f); err3 != nil {
 					log.Fatal(err3) // TODO jel ovo ok?
 				}
-				recline = fmt.Sprintf("%s,%d,%s", path, info.Size(), string(h.Sum(nil)))
+				recline = fmt.Sprintf("%d,%s", info.Size(), string(h.Sum(nil)))
 			} else {
-				recline = fmt.Sprintf("%s,%d", path, info.Size())
+				recline = fmt.Sprintf("%d", info.Size())
 			}
-			fc.collected = append(fc.collected, recline)
+			fc.collected = append(fc.collected, Pair{Key: path, Value: recline})
 		}
 		return nil
 	})
+	fc.progress = "sorting..."
+	sort.SliceStable(fc.collected, func(i, j int) bool {
+		return fc.collected[i].Key < fc.collected[j].Value
+	})
 }
 
-func (fc *FileChecker) Progress() float64 {
-	return 0.0
-}
-
-func (fc *FileChecker) Compare(a, b string) (int, error) {
-
+func (fc *FileChecker) Progress() string {
+	return fc.progress
 }
 
 func (fc *FileChecker) GetError() error {
 	return fc.err
 }
 
+type UserChecker struct {
+	BasicChecker
+}
+
 type ACLChecker struct {
+	BasicChecker
+}
+
+type PackageChecker struct {
 	BasicChecker
 }
