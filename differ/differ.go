@@ -22,6 +22,12 @@ type DiffLine struct {
 	Right checker.Pair
 }
 
+type DiffResult struct {
+	Left  string
+	Right string
+	Diffs []DiffLine
+}
+
 // Diff checks differences between two slices of key-value pairs.
 func Diff(x, y []checker.Pair) (diffs []DiffLine, err error) {
 	var i, j int
@@ -67,19 +73,44 @@ func SaveDiffsForVim(loc string, x, y []checker.Pair) error {
 
 }
 
-func SaveHTMLReport(location string, diffs []DiffLine) error {
+func SaveHTMLReport(location string, diffs DiffResult) error {
 	// TODO make template
-	var diffReport = template.Must(template.New("diffreport").Parse(reportTemplate))
+	var diffReport = template.Must(template.New("diffreport").
+		Funcs(template.FuncMap{"showDiffType": showDiffType}).Parse(reportTemplate))
 	// TODO populate template
 	out, err := os.Create(location)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = diffReport.Execute(os.Stdout, diffs)
+	err = diffReport.Execute(out, diffs)
 	// TODO write to file
 	return err
 }
 
 var reportTemplate = `
 <h1>diff report</h1>
+<table>
+	<tr><th>{{.Left}}</th><th>&nbsp;</th><th>{{.Right}}</th></tr>
+	{{range .diffs}}
+	<tr>
+		<td>{{.Left.Value}}</td>
+		<td>{{.T | showDiffType}}</td>
+		<td>{{.Right.Value}}</td>
+	</tr>
+	{{end}}
+</table>
 `
+
+func showDiffType(t DiffType) string {
+	switch t {
+	case EQUAL:
+		return "="
+	case LEFTNEW:
+		return "<"
+	case RIGHTNEW:
+		return ">"
+	case DIFFERENT:
+		return "x"
+	}
+	return "!"
+}
