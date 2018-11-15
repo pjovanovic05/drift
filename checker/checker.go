@@ -100,10 +100,15 @@ func (fc *FileChecker) Collect(config map[string]string) {
 		}
 		return nil
 	})
+	fc.mu.Lock()
 	fc.progress = "sorting..."
+	fc.mu.Unlock()
 	sort.SliceStable(fc.collected, func(i, j int) bool {
 		return fc.collected[i].Key < fc.collected[j].Value
 	})
+	fc.mu.Lock()
+	fc.progress = "done"
+	fc.mu.Unlock()
 }
 
 func (fc *FileChecker) Progress() string {
