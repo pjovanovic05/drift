@@ -97,7 +97,7 @@ func startClient(runConf, reportFN string) {
 	// generate report
 }
 
-func checkFCProgress(host Host, resc <-chan string) {
+func checkFCProgress(host Host, resc chan<- string) {
 	// TODO: goroutine koji proverava progress i pise to u neki kanal
 	res, err := http.Get(host.HostName + ":" + string(host.Port) + "/checkers/FileChecker/status")
 	if err != nil {
