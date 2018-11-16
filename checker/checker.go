@@ -121,6 +121,13 @@ func (fc *FileChecker) GetError() error {
 	return fc.err
 }
 
+// GetCollected returns array of pairs with collected state.
+func (fc *FileChecker) GetCollected() ([]Pair, error) {
+	fc.mu.Lock()
+	defer fc.mu.Unlock()
+	return fc.collected, nil
+}
+
 type UserChecker struct {
 	BasicChecker
 }
