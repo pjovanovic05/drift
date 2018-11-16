@@ -61,29 +61,15 @@ func Diff(x, y []checker.Pair) (diffs []DiffLine, err error) {
 	return diffs, err
 }
 
-func SaveDiff(diffs []DiffLine) error {
-	return nil
-}
-
-func LoadDiffs(location string) ([]DiffLine, error) {
-
-}
-
-func SaveDiffsForVim(loc string, x, y []checker.Pair) error {
-
-}
-
 func SaveHTMLReport(location string, diffs DiffResult) error {
-	// TODO make template
 	var diffReport = template.Must(template.New("diffreport").
 		Funcs(template.FuncMap{"showDiffType": showDiffType}).Parse(reportTemplate))
-	// TODO populate template
 	out, err := os.Create(location)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer out.Close()
 	err = diffReport.Execute(out, diffs)
-	// TODO write to file
 	return err
 }
 

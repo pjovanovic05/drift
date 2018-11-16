@@ -2,15 +2,13 @@ package main
 
 import (
 	"drift/checker"
-	"net"
-
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/zserge/webview"
 )
 
 var (
@@ -29,46 +27,37 @@ func main() {
 	fmt.Println("vim-go")
 
 	isServer := flag.Bool("d", false, "Run as daemon.")
+	runConfig := flag.String("config", "run-config.json", "JSON config of targets to compare.")
+	reportFN := flag.String("o", "drift-report.html", "File name for the report to be generated.")
 	flag.Parse()
 
 	if *isServer {
 		startServer()
 	} else {
-		startClient()
+		startClient(*runConfig, *reportFN)
 	}
 }
 
 func startServer() {
 	router := mux.NewRouter()
-	router.HandleFunc("/checkers/FileChecker/start", startFileChecker).Methods("GET") // TODO: ovo je mozda bolje da bude put ili post
+	router.HandleFunc("/checkers/FileChecker/start", startFileChecker).Methods("POST") // TODO: ovo je mozda bolje da bude put ili post
 	router.HandleFunc("/checkers/FileChecker/status", getFCStatus).Methods("GET")
 	router.HandleFunc("/checkers/FileChecker/results", getFCResults).Methods("GET")
 	log.Fatal(http.ListenAndServe(":8000", router))
 }
 
-func startClient() {
-	router := mux.NewRouter()
-	// TODO setup router
-	router.PathPrefix("/").Handler(http.FileServer(http.Dir("./clientui"))) //TODO assetFS
+// CLI client that takes json config of hosts to target, and generates html report.
+func startClient(runConf, reportFN string) {
 
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer ln.Close()
-	go func() {
-		log.Fatal(http.Serve(ln, router))
-	}()
-	webview.Open("Drift v0.1", "http://"+ln.Addr().String()+"/index.html", 800, 600, true)
 }
 
 func startFileChecker(w http.ResponseWriter, r *http.Request) {
-	// TODO fill exclusion map from request params
-	// skips := make(map[string]bool)
-	// hrs, err := fc.List("/", skips)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	config := make(map[string]string)
+	err := json.NewDecoder(r.Body).Decode(&config)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fc.Collect(config)
 	// data, err := json.Marshal(hrs)
 	// if err != nil {
 	// 	log.Fatal(err)

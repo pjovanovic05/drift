@@ -132,3 +132,7 @@ type ACLChecker struct {
 type PackageChecker struct {
 	BasicChecker
 }
+
+func (pc *PackageChecker) Collect(config map[string]string) {
+	// TODO: rpm/yum/dnf or apt or zypper or pacman or whatever?
+}
