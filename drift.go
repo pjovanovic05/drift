@@ -65,7 +65,6 @@ func startClient(runConf, reportFN string) {
 	if err = json.Unmarshal(confStr, &runConfig); err != nil {
 		log.Fatalf("JSON unmarshaling failed: %s\n", err)
 	}
-	// connect to targets
 	// start file checkers
 	if runConfig.FileCheckerConf != nil {
 		// start check on left
@@ -91,20 +90,32 @@ func startClient(runConf, reportFN string) {
 	// TODO: start other checkers
 
 	// poll for progress -> to goroutines and channels
+	// TODO: koristi sync.WaitGroup za cekanje zavrsetka gorutina...
+
 	// make get request for both targets
 	// wait until done
 	// when done, get results
 	// generate report
 }
 
-func checkFCProgress(host Host, resc chan<- string) {
+func checkFCProgress(host Host, resc chan<- StatusRep) {
 	// TODO: goroutine koji proverava progress i pise to u neki kanal
-	res, err := http.Get(host.HostName + ":" + string(host.Port) + "/checkers/FileChecker/status")
-	if err != nil {
-		log.Fatal(err)
+	for {
+		res, err := http.Get(host.HostName + ":" + string(host.Port) + "/checkers/FileChecker/status")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer res.Body.Close()
+		rep := StatusRep{}
+		err = json.NewDecoder(res.Body).Decode(&rep)
+		if err != nil {
+			log.Fatal(err)
+		}
+		resc <- rep
+		if rep.Progress == "done" {
+			break
+		}
 	}
-	defer res.Body.Close()
-
 }
 
 func startFileChecker(w http.ResponseWriter, r *http.Request) {
@@ -120,6 +131,11 @@ func startFileChecker(w http.ResponseWriter, r *http.Request) {
 	// }
 	// w.Header().Set("Content-Type", "application/json")
 	// w.Write(data)
+}
+
+//StatusRep is checker status report.
+type StatusRep struct {
+	Progress string
 }
 
 func getFCStatus(w http.ResponseWriter, r *http.Request) {
