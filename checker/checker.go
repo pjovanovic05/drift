@@ -125,7 +125,7 @@ func (fc *FileChecker) GetError() error {
 func (fc *FileChecker) GetCollected() ([]Pair, error) {
 	fc.mu.Lock()
 	defer fc.mu.Unlock()
-	return fc.collected, nil
+	return fc.collected, fc.err
 }
 
 type UserChecker struct {

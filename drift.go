@@ -3,12 +3,14 @@ package main
 import (
 	"bytes"
 	"drift/checker"
+	"drift/differ"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/mux"
 )
@@ -56,6 +58,7 @@ func startServer() {
 
 // CLI client that takes json config of hosts to target, and generates html report.
 func startClient(runConf, reportFN string) {
+	var wg sync.WaitGroup
 	// TODO: load configuration
 	confStr, err := ioutil.ReadFile(runConf)
 	if err != nil {
@@ -88,18 +91,43 @@ func startClient(runConf, reportFN string) {
 		defer res2.Body.Close()
 	}
 	// TODO: start other checkers
+	resc := make(chan StatusRep)
+	go checkFCProgress(runConfig.Left, resc, &wg)
+	go checkFCProgress(runConfig.Right, resc, &wg)
 
-	// poll for progress -> to goroutines and channels
-	// TODO: koristi sync.WaitGroup za cekanje zavrsetka gorutina...
+	// closer
+	go func() {
+		wg.Wait()
+		close(resc)
+	}()
 
-	// make get request for both targets
-	// wait until done
+	for res := range resc {
+		fmt.Println(res.Progress)
+	}
+
 	// when done, get results
+	psL, err := fetchFCResults(runConfig.Left)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	psR, err := fetchFCResults(runConfig.Right)
+	if err != nil {
+		log.Fatal(err)
+	}
 	// generate report
+
+	ds, err := differ.Diff(psL, psR)
+	if err != nil {
+		log.Fatal(err)
+	}
+	differ.SaveHTMLReport("test.html", ds)
 }
 
-func checkFCProgress(host Host, resc chan<- StatusRep) {
+func checkFCProgress(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
 	// TODO: goroutine koji proverava progress i pise to u neki kanal
+	wg.Add(1)
+	defer wg.Done()
 	for {
 		res, err := http.Get(host.HostName + ":" + string(host.Port) + "/checkers/FileChecker/status")
 		if err != nil {
@@ -138,11 +166,29 @@ type StatusRep struct {
 	Progress string
 }
 
+func fetchFCResults(host Host) (ps []checker.Pair, err error) {
+	res, err := http.Get(host.HostName + ":" + string(host.Port) + "/checkers/FileChecker/results")
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = json.NewDecoder(res.Body).Decode(&ps)
+	return
+}
+
 func getFCStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(`{"Progress": "` + fc.Progress() + `"}`))
 }
 
 func getFCResults(w http.ResponseWriter, r *http.Request) {
-	// TODO:
+	collected, err := fc.GetCollected()
+	if err != nil {
+		log.Fatal(err)
+	}
+	data, err := json.Marshal(collected)
+	if err != nil {
+		log.Fatal(err)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
 }

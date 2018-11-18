@@ -29,8 +29,9 @@ type DiffResult struct {
 }
 
 // Diff checks differences between two slices of key-value pairs.
-func Diff(x, y []checker.Pair) (diffs []DiffLine, err error) {
+func Diff(x, y []checker.Pair) (dr DiffResult, err error) {
 	var i, j int
+	var diffs []DiffLine
 	xn, yn := len(x), len(y)
 	for i < xn && j < yn {
 		if x[i].Key == y[j].Key {
@@ -58,7 +59,8 @@ func Diff(x, y []checker.Pair) (diffs []DiffLine, err error) {
 	for ; j < yn; j++ {
 		diffs = append(diffs, DiffLine{T: RIGHTNEW, Right: y[i]})
 	}
-	return diffs, err
+	dr = DiffResult{Diffs: diffs}
+	return dr, err
 }
 
 func SaveHTMLReport(location string, diffs DiffResult) error {
