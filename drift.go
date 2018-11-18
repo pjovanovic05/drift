@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 	"sync"
 
 	"github.com/gorilla/mux"
@@ -34,8 +35,6 @@ type RunConf struct {
 }
 
 func main() {
-	fmt.Println("vim-go")
-
 	isServer := flag.Bool("d", false, "Run as daemon.")
 	runConfig := flag.String("config", "run-config.json", "JSON config of targets to compare.")
 	reportFN := flag.String("o", "drift-report.html", "File name for the report to be generated.")
@@ -72,7 +71,7 @@ func startClient(runConf, reportFN string) {
 	if runConfig.FileCheckerConf != nil {
 		// start check on left
 		// TODO: construct url for posting...
-		letfURL := runConfig.Left.HostName + ":" + string(runConfig.Left.Port) + "/checkers/FileChecker/start"
+		letfURL := "http://" + runConfig.Left.HostName + ":" + strconv.Itoa(runConfig.Left.Port) + "/checkers/FileChecker/start"
 		body, err := json.Marshal(runConfig.FileCheckerConf)
 		if err != nil {
 			log.Fatal(err)
@@ -83,7 +82,7 @@ func startClient(runConf, reportFN string) {
 		}
 		defer res.Body.Close()
 		// start check on right
-		rightURL := runConfig.Right.HostName + ":" + string(runConfig.Right.Port) + "/checkers/FileChecker/start"
+		rightURL := "http://" + runConfig.Right.HostName + ":" + strconv.Itoa(runConfig.Right.Port) + "/checkers/FileChecker/start"
 		res2, err := http.Post(rightURL, "application/json", bytes.NewBuffer(body))
 		if err != nil {
 			log.Fatal(err)
@@ -129,7 +128,7 @@ func checkFCProgress(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
 	wg.Add(1)
 	defer wg.Done()
 	for {
-		res, err := http.Get(host.HostName + ":" + string(host.Port) + "/checkers/FileChecker/status")
+		res, err := http.Get("http://" + host.HostName + ":" + strconv.Itoa(host.Port) + "/checkers/FileChecker/status")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -167,7 +166,7 @@ type StatusRep struct {
 }
 
 func fetchFCResults(host Host) (ps []checker.Pair, err error) {
-	res, err := http.Get(host.HostName + ":" + string(host.Port) + "/checkers/FileChecker/results")
+	res, err := http.Get("http://" + host.HostName + ":" + strconv.Itoa(host.Port) + "/checkers/FileChecker/results")
 	if err != nil {
 		log.Fatal(err)
 	}
