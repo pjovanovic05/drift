@@ -57,6 +57,9 @@ type FileChecker struct {
 // Returns list of strings containg dir/file full name, size or
 // hash, comma separated.
 func (fc *FileChecker) Collect(config map[string]string) {
+	fc.mu.Lock()
+	fc.collected = fc.collected[:0]
+	fc.mu.Unlock()
 	skipPaths := strings.Split(config["skips"], ":")
 	collectHash := config["hash"] == "true" || config["hash"] == "yes"
 	targetPath := config["path"]
