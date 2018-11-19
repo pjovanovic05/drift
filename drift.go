@@ -34,7 +34,7 @@ type Host struct {
 type RunConf struct {
 	Left            Host
 	Right           Host
-	FileCheckerConf map[string]string `json:"omitempty"`
+	FileCheckerConf map[string]interface{} `json:"omitempty"`
 }
 
 func main() {
@@ -60,6 +60,7 @@ func startServer() {
 
 // CLI client that takes json config of hosts to target, and generates html report.
 func startClient(runConf, reportFN string) {
+	fmt.Println("Started client...")
 	var wg sync.WaitGroup
 	confStr, err := ioutil.ReadFile(runConf)
 	if err != nil {
@@ -69,12 +70,14 @@ func startClient(runConf, reportFN string) {
 	if err = json.Unmarshal(confStr, &runConfig); err != nil {
 		log.Fatalf("JSON unmarshaling failed: %s\n", err)
 	}
+	fmt.Println(runConfig.FileCheckerConf)
 	// start file checkers
 	if runConfig.FileCheckerConf != nil {
 		body, err := json.Marshal(runConfig.FileCheckerConf)
 		if err != nil {
 			log.Fatal(err)
 		}
+		fmt.Println("request body:", body)
 		// start check on left
 		// TODO: construct url for posting...
 		letfURL := "http://" + runConfig.Left.HostName + ":" + strconv.Itoa(runConfig.Left.Port) + "/checkers/FileChecker/start"
@@ -82,16 +85,16 @@ func startClient(runConf, reportFN string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer res.Body.Close()
 		io.Copy(os.Stdout, res.Body)
+		res.Body.Close()
 		// start check on right
 		rightURL := "http://" + runConfig.Right.HostName + ":" + strconv.Itoa(runConfig.Right.Port) + "/checkers/FileChecker/start"
 		res2, err := http.Post(rightURL, "application/json", bytes.NewBuffer(body))
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer res2.Body.Close()
 		io.Copy(os.Stdout, res2.Body)
+		res2.Body.Close()
 	}
 	// TODO: start other checkers
 	resc := make(chan StatusRep)

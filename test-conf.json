@@ -8,7 +8,7 @@
         "Port": 8000
     },
     "FileCheckerConf": {
-        "path":"/",
+        "path": "/etc",
         "skipPaths": "/tmp:/proc:/home:/dev:/boot:/var:/srv",
         "hash": "yes"
     }
