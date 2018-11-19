@@ -9,7 +9,7 @@
     },
     "FileCheckerConf": {
         "path":"/",
-        "skipPaths": "/tmp:/proc:/home",
+        "skipPaths": "/tmp:/proc:/home:/dev:/boot:/var:/srv",
         "hash": "yes"
     }
 }

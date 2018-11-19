@@ -66,12 +66,21 @@ func (fc *FileChecker) Collect(config map[string]string) {
 		skips[dir] = true
 	}
 	fc.err = filepath.Walk(targetPath, func(path string, info os.FileInfo, err0 error) error {
+		fmt.Println("collecting ", path, info.IsDir())
 		if info.IsDir() {
 			if skips[path] {
 				return filepath.SkipDir
 			}
 			fc.mu.Lock()
 			fc.collected = append(fc.collected, Pair{Key: path, Value: "DIR"})
+			fc.progress = "checking: " + path
+			fc.mu.Unlock()
+		} else if info.Mode()&os.ModeSymlink == os.ModeSymlink {
+			if skips[path] {
+				return nil
+			}
+			fc.mu.Lock()
+			fc.collected = append(fc.collected, Pair{Key: path, Value: "SYMLINK"})
 			fc.progress = "checking: " + path
 			fc.mu.Unlock()
 		} else {
@@ -90,7 +99,7 @@ func (fc *FileChecker) Collect(config map[string]string) {
 				if _, err3 := io.Copy(h, f); err3 != nil {
 					log.Fatal(err3) // TODO jel ovo ok?
 				}
-				recline = fmt.Sprintf("%d,%s", info.Size(), string(h.Sum(nil)))
+				recline = fmt.Sprintf("%d,%x", info.Size(), h.Sum(nil))
 			} else {
 				recline = fmt.Sprintf("%d", info.Size())
 			}

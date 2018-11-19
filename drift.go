@@ -7,11 +7,14 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -52,13 +55,12 @@ func startServer() {
 	router.HandleFunc("/checkers/FileChecker/start", startFileChecker).Methods("POST")
 	router.HandleFunc("/checkers/FileChecker/status", getFCStatus).Methods("GET")
 	router.HandleFunc("/checkers/FileChecker/results", getFCResults).Methods("GET")
-	log.Fatal(http.ListenAndServe(":8000", router))
+	log.Fatal(http.ListenAndServe("0.0.0.0:8000", router))
 }
 
 // CLI client that takes json config of hosts to target, and generates html report.
 func startClient(runConf, reportFN string) {
 	var wg sync.WaitGroup
-	// TODO: load configuration
 	confStr, err := ioutil.ReadFile(runConf)
 	if err != nil {
 		log.Fatalf("Reading config file failed: %s\n", err)
@@ -69,18 +71,19 @@ func startClient(runConf, reportFN string) {
 	}
 	// start file checkers
 	if runConfig.FileCheckerConf != nil {
-		// start check on left
-		// TODO: construct url for posting...
-		letfURL := "http://" + runConfig.Left.HostName + ":" + strconv.Itoa(runConfig.Left.Port) + "/checkers/FileChecker/start"
 		body, err := json.Marshal(runConfig.FileCheckerConf)
 		if err != nil {
 			log.Fatal(err)
 		}
+		// start check on left
+		// TODO: construct url for posting...
+		letfURL := "http://" + runConfig.Left.HostName + ":" + strconv.Itoa(runConfig.Left.Port) + "/checkers/FileChecker/start"
 		res, err := http.Post(letfURL, "application/json", bytes.NewBuffer(body))
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer res.Body.Close()
+		io.Copy(os.Stdout, res.Body)
 		// start check on right
 		rightURL := "http://" + runConfig.Right.HostName + ":" + strconv.Itoa(runConfig.Right.Port) + "/checkers/FileChecker/start"
 		res2, err := http.Post(rightURL, "application/json", bytes.NewBuffer(body))
@@ -88,9 +91,11 @@ func startClient(runConf, reportFN string) {
 			log.Fatal(err)
 		}
 		defer res2.Body.Close()
+		io.Copy(os.Stdout, res2.Body)
 	}
 	// TODO: start other checkers
 	resc := make(chan StatusRep)
+	wg.Add(2)
 	go checkFCProgress(runConfig.Left, resc, &wg)
 	go checkFCProgress(runConfig.Right, resc, &wg)
 
@@ -125,9 +130,9 @@ func startClient(runConf, reportFN string) {
 
 func checkFCProgress(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
 	// TODO: goroutine koji proverava progress i pise to u neki kanal
-	wg.Add(1)
 	defer wg.Done()
 	for {
+		time.Sleep(2 * time.Second)
 		res, err := http.Get("http://" + host.HostName + ":" + strconv.Itoa(host.Port) + "/checkers/FileChecker/status")
 		if err != nil {
 			log.Fatal(err)
@@ -151,13 +156,11 @@ func startFileChecker(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fc.Collect(config)
-	// data, err := json.Marshal(hrs)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// w.Header().Set("Content-Type", "application/json")
-	// w.Write(data)
+	go fc.Collect(config)
+	log.Println("Collection started...")
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte("{\"Status\":\"OK\"}\n"))
 }
 
 //StatusRep is checker status report.
@@ -175,8 +178,13 @@ func fetchFCResults(host Host) (ps []checker.Pair, err error) {
 }
 
 func getFCStatus(w http.ResponseWriter, r *http.Request) {
+	rep := StatusRep{Progress: fc.Progress()}
+	data, err := json.Marshal(rep)
+	if err != nil {
+		log.Fatal(err)
+	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"Progress": "` + fc.Progress() + `"}`))
+	w.Write(data)
 }
 
 func getFCResults(w http.ResponseWriter, r *http.Request) {
