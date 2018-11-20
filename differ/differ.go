@@ -3,6 +3,7 @@ package differ
 import (
 	"drift/checker"
 	"html/template"
+	"io"
 	"log"
 	"os"
 )
@@ -63,6 +64,7 @@ func Diff(x, y []checker.Pair) (dr DiffResult, err error) {
 	return dr, err
 }
 
+//TODO move file creation outside, and write to io.Writer
 func SaveHTMLReport(location string, diffs DiffResult) error {
 	var diffReport = template.Must(template.New("diffreport").
 		Funcs(template.FuncMap{"showDiffType": showDiffType}).Parse(reportTemplate))
@@ -72,6 +74,13 @@ func SaveHTMLReport(location string, diffs DiffResult) error {
 	}
 	defer out.Close()
 	err = diffReport.Execute(out, diffs)
+	return err
+}
+
+func GetHtmlReport(out io.Writer, diffs DiffResult) error {
+	var diffReport = template.Must(template.New("diffreport").
+		Funcs(template.FuncMap{"showDiffType": showDiffType}).Parse(reportTemplate))
+	err := diffReport.Execute(out, diffs)
 	return err
 }
 

@@ -92,9 +92,15 @@ func (fc *FileChecker) Collect(config map[string]string) {
 				return nil
 			}
 			if collectHash {
-				f, err2 := os.Open(path)
+				f, err2 := os.OpenFile(path, os.O_RDONLY, 0666)
 				if err2 != nil {
-					// TODO sta sa greskom?
+					if os.IsPermission(err2) {
+						//insufficient permissions
+						fc.mu.Lock()
+						fc.collected = append(fc.collected, Pair{Key: path, Value: "PERM_ERR"})
+						fc.mu.Unlock()
+						return nil
+					}
 					return err2
 				}
 				defer f.Close()

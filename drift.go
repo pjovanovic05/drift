@@ -34,7 +34,11 @@ type Host struct {
 type RunConf struct {
 	Left            Host
 	Right           Host
-	FileCheckerConf map[string]interface{} `json:"omitempty"`
+	FileCheckerConf struct {
+		Path  string `json:"path"`
+		Skips string `json:"skips"`
+		Hash  string `json:"hash"`
+	}
 }
 
 func main() {
@@ -66,20 +70,20 @@ func startClient(runConf, reportFN string) {
 	if err != nil {
 		log.Fatalf("Reading config file failed: %s\n", err)
 	}
+	fmt.Println("Config string:", string(confStr))
 	runConfig := RunConf{}
 	if err = json.Unmarshal(confStr, &runConfig); err != nil {
 		log.Fatalf("JSON unmarshaling failed: %s\n", err)
 	}
-	fmt.Println(runConfig.FileCheckerConf)
+	fmt.Println(">>", runConfig.FileCheckerConf.Path, runConfig.FileCheckerConf.Skips, runConfig.FileCheckerConf.Hash)
 	// start file checkers
-	if runConfig.FileCheckerConf != nil {
+	if runConfig.FileCheckerConf.Path != "" {
 		body, err := json.Marshal(runConfig.FileCheckerConf)
 		if err != nil {
 			log.Fatal(err)
 		}
 		fmt.Println("request body:", body)
 		// start check on left
-		// TODO: construct url for posting...
 		letfURL := "http://" + runConfig.Left.HostName + ":" + strconv.Itoa(runConfig.Left.Port) + "/checkers/FileChecker/start"
 		res, err := http.Post(letfURL, "application/json", bytes.NewBuffer(body))
 		if err != nil {
@@ -109,7 +113,7 @@ func startClient(runConf, reportFN string) {
 	}()
 
 	for res := range resc {
-		fmt.Println(res.Progress)
+		fmt.Println(res.Host + ": " + res.Progress)
 	}
 
 	// when done, get results
@@ -143,6 +147,7 @@ func checkFCProgress(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
 		defer res.Body.Close()
 		rep := StatusRep{}
 		err = json.NewDecoder(res.Body).Decode(&rep)
+		rep.Host = host.HostName
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -168,6 +173,7 @@ func startFileChecker(w http.ResponseWriter, r *http.Request) {
 
 //StatusRep is checker status report.
 type StatusRep struct {
+	Host     string
 	Progress string
 }
 
