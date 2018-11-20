@@ -132,7 +132,17 @@ func startClient(runConf, reportFN string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	differ.SaveHTMLReport("test.html", ds)
+
+	// differ.SaveHTMLReport("test.html", ds)
+	html, err := differ.GetHtmlReport(ds)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(html)
+	err = ioutil.WriteFile("test.html", []byte(html), 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func checkFCProgress(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {

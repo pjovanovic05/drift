@@ -122,7 +122,7 @@ func (fc *FileChecker) Collect(config map[string]string) {
 	fc.progress = "sorting..."
 	fc.mu.Unlock()
 	sort.SliceStable(fc.collected, func(i, j int) bool {
-		return fc.collected[i].Key < fc.collected[j].Value
+		return fc.collected[i].Key < fc.collected[j].Key
 	})
 	fc.mu.Lock()
 	fc.progress = "done"

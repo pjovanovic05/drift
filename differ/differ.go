@@ -1,11 +1,9 @@
 package differ
 
 import (
+	"bytes"
 	"drift/checker"
 	"html/template"
-	"io"
-	"log"
-	"os"
 )
 
 type DiffType int
@@ -48,7 +46,7 @@ func Diff(x, y []checker.Pair) (dr DiffResult, err error) {
 				diffs = append(diffs, DiffLine{T: LEFTNEW, Left: x[i]})
 				i++
 			} else {
-				diffs = append(diffs, DiffLine{T: RIGHTNEW, Right: y[i]})
+				diffs = append(diffs, DiffLine{T: RIGHTNEW, Right: y[j]})
 				j++
 			}
 		}
@@ -58,41 +56,29 @@ func Diff(x, y []checker.Pair) (dr DiffResult, err error) {
 		diffs = append(diffs, DiffLine{T: LEFTNEW, Left: x[i]})
 	}
 	for ; j < yn; j++ {
-		diffs = append(diffs, DiffLine{T: RIGHTNEW, Right: y[i]})
+		diffs = append(diffs, DiffLine{T: RIGHTNEW, Right: y[j]})
 	}
 	dr = DiffResult{Diffs: diffs}
 	return dr, err
 }
 
-//TODO move file creation outside, and write to io.Writer
-func SaveHTMLReport(location string, diffs DiffResult) error {
+func GetHtmlReport(diffs DiffResult) (string, error) {
+	var outBuff bytes.Buffer
 	var diffReport = template.Must(template.New("diffreport").
 		Funcs(template.FuncMap{"showDiffType": showDiffType}).Parse(reportTemplate))
-	out, err := os.Create(location)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer out.Close()
-	err = diffReport.Execute(out, diffs)
-	return err
-}
-
-func GetHtmlReport(out io.Writer, diffs DiffResult) error {
-	var diffReport = template.Must(template.New("diffreport").
-		Funcs(template.FuncMap{"showDiffType": showDiffType}).Parse(reportTemplate))
-	err := diffReport.Execute(out, diffs)
-	return err
+	err := diffReport.Execute(&outBuff, diffs)
+	return outBuff.String(), err
 }
 
 var reportTemplate = `
 <h1>diff report</h1>
 <table>
 	<tr><th>{{.Left}}</th><th>&nbsp;</th><th>{{.Right}}</th></tr>
-	{{range .diffs}}
+	{{range .Diffs}}
 	<tr>
-		<td>{{.Left.Value}}</td>
+		<td>{{.Left.Key}}</td>
 		<td>{{.T | showDiffType}}</td>
-		<td>{{.Right.Value}}</td>
+		<td>{{.Right.Key}}</td>
 	</tr>
 	{{end}}
 </table>
