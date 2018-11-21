@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -69,22 +70,19 @@ func (fc *FileChecker) Collect(config map[string]string) {
 		skips[dir] = true
 	}
 	fc.err = filepath.Walk(targetPath, func(path string, info os.FileInfo, err0 error) error {
-		//fmt.Println("collecting ", path, info.IsDir())
 		var recline string
-		if info.IsDir() {
-			if skips[path] {
+		if skips[path] {
+			if info.IsDir() {
 				return filepath.SkipDir
 			}
+			return nil
+		}
+
+		if info.IsDir() {
 			recline = "DIR"
 		} else if info.Mode()&os.ModeSymlink == os.ModeSymlink {
-			if skips[path] {
-				return nil
-			}
 			recline = "SYMLINK"
 		} else {
-			if skips[path] {
-				return nil
-			}
 			if collectHash && isFileReadable(&info) {
 				f, err2 := os.OpenFile(path, os.O_RDONLY, 0666)
 				if err2 != nil {
@@ -106,6 +104,7 @@ func (fc *FileChecker) Collect(config map[string]string) {
 		fc.mu.Unlock()
 		return nil
 	})
+
 	fc.mu.Lock()
 	fc.progress = "sorting..."
 	fc.mu.Unlock()
@@ -127,7 +126,7 @@ func (fc *FileChecker) Progress() string {
 	return fc.progress
 }
 
-func (fc *FileChecker) GetError() error {
+func (fc *FileChecker) GetErr() error {
 	return fc.err
 }
 
@@ -146,10 +145,39 @@ type ACLChecker struct {
 	BasicChecker
 }
 
-type PackageChecker struct {
+// RPMPackageChecker collects the list of packages and versions.
+type RPMPackageChecker struct {
 	BasicChecker
 }
 
-func (pc *PackageChecker) Collect(config map[string]string) {
-	// TODO: rpm/yum/dnf or apt or zypper or pacman or whatever?
+// Collect installed package names and versions.
+func (rpmc *RPMPackageChecker) Collect(config map[string]string) {
+	// rpm -qa --queryformat "%{NAME},%{VERSION}\n"
+	output, err := exec.Command("rpm", "-qa", "--queryformat",
+		`"%{NAME},%{VERSION}\n"`).CombinedOutput()
+	if err != nil {
+		log.Fatal(err)
+	}
+	lines := strings.Split(string(output), "\n")
+	// convert csv output string to list of packages => collected
+	for _, line := range lines {
+		kv := strings.Split(line, ",")
+		rpmc.collected = append(rpmc.collected, Pair{Key: kv[0], Value: kv[1]})
+	}
+	// sort collected
+	sort.SliceStable(rpmc.collected, func(i, j int) bool {
+		return rpmc.collected[i].Key < rpmc.collected[j].Key
+	})
+}
+
+func (rpmc *RPMPackageChecker) Progress() string {
+	return rpmc.progress
+}
+
+func (rpmc *RPMPackageChecker) GetCollected() ([]Pair, error) {
+	return rpmc.collected, rpmc.err
+}
+
+func (rpmc *RPMPackageChecker) GetErr() error {
+	return rpmc.err
 }

@@ -75,8 +75,6 @@ func startClient(runConf, reportFN string) {
 	if err = json.Unmarshal(confStr, &runConfig); err != nil {
 		log.Fatalf("JSON unmarshaling failed: %s\n", err)
 	}
-	fmt.Println(">>", runConfig.FileCheckerConf.Path,
-		runConfig.FileCheckerConf.Skips, runConfig.FileCheckerConf.Hash)
 	// start file checkers
 	if runConfig.FileCheckerConf.Path != "" {
 		body, err := json.Marshal(runConfig.FileCheckerConf)
@@ -119,30 +117,24 @@ func startClient(runConf, reportFN string) {
 	for res := range resc {
 		fmt.Println(res.Host + ": " + res.Progress)
 	}
-
 	// when done, get results
 	psL, err := fetchFCResults(runConfig.Left)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	psR, err := fetchFCResults(runConfig.Right)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// generate report
-
 	ds, err := differ.Diff(psL, psR)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// differ.SaveHTMLReport("test.html", ds)
 	html, err := differ.GetHtmlReport(ds)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	err = ioutil.WriteFile("test.html", []byte(html), 0644)
 	if err != nil {
 		log.Fatal(err)
@@ -150,7 +142,6 @@ func startClient(runConf, reportFN string) {
 }
 
 func checkFCProgress(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
-	// TODO: goroutine koji proverava progress i pise to u neki kanal
 	defer wg.Done()
 	for {
 		time.Sleep(2 * time.Second)
