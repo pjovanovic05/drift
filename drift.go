@@ -75,7 +75,8 @@ func startClient(runConf, reportFN string) {
 	if err = json.Unmarshal(confStr, &runConfig); err != nil {
 		log.Fatalf("JSON unmarshaling failed: %s\n", err)
 	}
-	fmt.Println(">>", runConfig.FileCheckerConf.Path, runConfig.FileCheckerConf.Skips, runConfig.FileCheckerConf.Hash)
+	fmt.Println(">>", runConfig.FileCheckerConf.Path,
+		runConfig.FileCheckerConf.Skips, runConfig.FileCheckerConf.Hash)
 	// start file checkers
 	if runConfig.FileCheckerConf.Path != "" {
 		body, err := json.Marshal(runConfig.FileCheckerConf)
@@ -84,7 +85,8 @@ func startClient(runConf, reportFN string) {
 		}
 		fmt.Println("request body:", body)
 		// start check on left
-		letfURL := "http://" + runConfig.Left.HostName + ":" + strconv.Itoa(runConfig.Left.Port) + "/checkers/FileChecker/start"
+		letfURL := "http://" + runConfig.Left.HostName + ":" +
+			strconv.Itoa(runConfig.Left.Port) + "/checkers/FileChecker/start"
 		res, err := http.Post(letfURL, "application/json", bytes.NewBuffer(body))
 		if err != nil {
 			log.Fatal(err)
@@ -92,7 +94,8 @@ func startClient(runConf, reportFN string) {
 		io.Copy(os.Stdout, res.Body)
 		res.Body.Close()
 		// start check on right
-		rightURL := "http://" + runConfig.Right.HostName + ":" + strconv.Itoa(runConfig.Right.Port) + "/checkers/FileChecker/start"
+		rightURL := "http://" + runConfig.Right.HostName + ":" +
+			strconv.Itoa(runConfig.Right.Port) + "/checkers/FileChecker/start"
 		res2, err := http.Post(rightURL, "application/json", bytes.NewBuffer(body))
 		if err != nil {
 			log.Fatal(err)
@@ -112,6 +115,7 @@ func startClient(runConf, reportFN string) {
 		close(resc)
 	}()
 
+	//print progress reports
 	for res := range resc {
 		fmt.Println(res.Host + ": " + res.Progress)
 	}
@@ -138,7 +142,7 @@ func startClient(runConf, reportFN string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(html)
+
 	err = ioutil.WriteFile("test.html", []byte(html), 0644)
 	if err != nil {
 		log.Fatal(err)

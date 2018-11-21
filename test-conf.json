@@ -8,8 +8,8 @@
         "Port": 8000
     },
     "FileCheckerConf": {
-        "path": "/etc",
-        "skips": "/tmp:/proc:/home:/dev:/boot:/var:/srv",
+        "path": "/",
+        "skips": "/tmp:/proc:/home:/dev:/boot:/var:/srv:/selinux:/sys",
         "hash": "yes"
     }
 }

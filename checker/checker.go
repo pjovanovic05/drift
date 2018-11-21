@@ -69,7 +69,7 @@ func (fc *FileChecker) Collect(config map[string]string) {
 		skips[dir] = true
 	}
 	fc.err = filepath.Walk(targetPath, func(path string, info os.FileInfo, err0 error) error {
-		fmt.Println("collecting ", path, info.IsDir())
+		//fmt.Println("collecting ", path, info.IsDir())
 		if info.IsDir() {
 			if skips[path] {
 				return filepath.SkipDir
@@ -91,16 +91,9 @@ func (fc *FileChecker) Collect(config map[string]string) {
 			if skips[path] {
 				return nil
 			}
-			if collectHash {
+			if collectHash && isFileReadable(&info) {
 				f, err2 := os.OpenFile(path, os.O_RDONLY, 0666)
 				if err2 != nil {
-					if os.IsPermission(err2) {
-						//insufficient permissions
-						fc.mu.Lock()
-						fc.collected = append(fc.collected, Pair{Key: path, Value: "PERM_ERR"})
-						fc.mu.Unlock()
-						return nil
-					}
 					return err2
 				}
 				defer f.Close()
@@ -127,6 +120,10 @@ func (fc *FileChecker) Collect(config map[string]string) {
 	fc.mu.Lock()
 	fc.progress = "done"
 	fc.mu.Unlock()
+}
+
+func isFileReadable(info *os.FileInfo) bool {
+	return (*info).Mode().String()[1] == 'r'
 }
 
 func (fc *FileChecker) Progress() string {
