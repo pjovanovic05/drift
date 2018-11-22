@@ -10,8 +10,15 @@ import (
 )
 
 var (
-	fc checker.FileChecker
+	fc  checker.FileChecker
+	pmc checker.PackageChecker
 )
+
+//StatusRep is checker status report.
+type StatusRep struct {
+	Host     string
+	Progress string
+}
 
 func startServer() {
 	router := mux.NewRouter()
@@ -29,15 +36,8 @@ func startFileChecker(w http.ResponseWriter, r *http.Request) {
 	}
 	go fc.Collect(config)
 	log.Println("Collection started...")
-
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte("{\"Status\":\"OK\"}\n"))
-}
-
-//StatusRep is checker status report.
-type StatusRep struct {
-	Host     string
-	Progress string
 }
 
 func getFCStatus(w http.ResponseWriter, r *http.Request) {
@@ -61,4 +61,13 @@ func getFCResults(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(data)
+}
+
+func startRPMChecker(w http.ResponseWriter, r *http.Request) {
+	config := make(map[string]string)
+	config["manager"] = "rpm"
+	go pmc.Collect(config)
+	log.Println("Collecting packages...")
+	w.Header()
+	w.Write([]byte(`{"Status": "OK"}\n`))
 }

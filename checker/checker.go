@@ -2,6 +2,7 @@ package checker
 
 import (
 	"crypto/md5"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -145,13 +146,18 @@ type ACLChecker struct {
 	BasicChecker
 }
 
-// RPMPackageChecker collects the list of packages and versions.
-type RPMPackageChecker struct {
+// PackageChecker collects the list of packages and versions.
+type PackageChecker struct {
 	BasicChecker
 }
 
 // Collect installed package names and versions.
-func (rpmc *RPMPackageChecker) Collect(config map[string]string) {
+func (pmc *PackageChecker) Collect(config map[string]string) {
+	if strings.ToLower(config["manager"]) != "rpm" {
+		pmc.err = errors.New("Only RPM manager is supported.")
+		// TODO support for other package managers.
+		return
+	}
 	// rpm -qa --queryformat "%{NAME},%{VERSION}\n"
 	output, err := exec.Command("rpm", "-qa", "--queryformat",
 		`"%{NAME},%{VERSION}\n"`).CombinedOutput()
@@ -162,22 +168,23 @@ func (rpmc *RPMPackageChecker) Collect(config map[string]string) {
 	// convert csv output string to list of packages => collected
 	for _, line := range lines {
 		kv := strings.Split(line, ",")
-		rpmc.collected = append(rpmc.collected, Pair{Key: kv[0], Value: kv[1]})
+		pmc.collected = append(pmc.collected, Pair{Key: kv[0], Value: kv[1]})
 	}
 	// sort collected
-	sort.SliceStable(rpmc.collected, func(i, j int) bool {
-		return rpmc.collected[i].Key < rpmc.collected[j].Key
+	sort.SliceStable(pmc.collected, func(i, j int) bool {
+		return pmc.collected[i].Key < pmc.collected[j].Key
 	})
+	pmc.progress = "done"
 }
 
-func (rpmc *RPMPackageChecker) Progress() string {
-	return rpmc.progress
+func (pmc *PackageChecker) Progress() string {
+	return pmc.progress
 }
 
-func (rpmc *RPMPackageChecker) GetCollected() ([]Pair, error) {
-	return rpmc.collected, rpmc.err
+func (pmc *PackageChecker) GetCollected() ([]Pair, error) {
+	return pmc.collected, pmc.err
 }
 
-func (rpmc *RPMPackageChecker) GetErr() error {
-	return rpmc.err
+func (pmc *PackageChecker) GetErr() error {
+	return pmc.err
 }

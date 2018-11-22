@@ -32,6 +32,9 @@ type RunConf struct {
 		Skips string `json:"skips"`
 		Hash  string `json:"hash"`
 	}
+	PackageCheckerConf struct {
+		Manager string `json:"manager"`
+	}
 }
 
 // CLI client that takes json config of hosts to target, and generates html report.
@@ -57,28 +60,10 @@ func startClient(runConf, reportFN string) {
 	}
 	// start file checkers
 	if runConfig.FileCheckerConf.Path != "" {
-		body, err := json.Marshal(runConfig.FileCheckerConf)
+		err = startFC(runConfig)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Error starting FileChecker on targets: %s\n", err)
 		}
-		// start check on left
-		letfURL := "http://" + runConfig.Left.HostName + ":" +
-			strconv.Itoa(runConfig.Left.Port) + "/checkers/FileChecker/start"
-		res, err := http.Post(letfURL, "application/json", bytes.NewBuffer(body))
-		if err != nil {
-			log.Fatal(err)
-		}
-		io.Copy(os.Stdout, res.Body)
-		res.Body.Close()
-		// start check on right
-		rightURL := "http://" + runConfig.Right.HostName + ":" +
-			strconv.Itoa(runConfig.Right.Port) + "/checkers/FileChecker/start"
-		res2, err := http.Post(rightURL, "application/json", bytes.NewBuffer(body))
-		if err != nil {
-			log.Fatal(err)
-		}
-		io.Copy(os.Stdout, res2.Body)
-		res2.Body.Close()
 	}
 	// TODO: start other checkers
 	resc := make(chan StatusRep)
@@ -120,8 +105,30 @@ func startClient(runConf, reportFN string) {
 	}
 }
 
-func startFC(conf RunConf) {
-	// TODO
+// Start File checker on targets.
+func startFC(config RunConf) error {
+	body, err := json.Marshal(config.FileCheckerConf)
+	if err != nil {
+		return err
+	}
+	leftURL := "http://" + config.Left.HostName + ":" +
+		strconv.Itoa(config.Left.Port) + "/checkers/FileChecker/start"
+	res, err := http.Post(leftURL, "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	io.Copy(os.Stdout, res.Body)
+	res.Body.Close()
+	rightURL := "http://" + config.Right.HostName + ":" +
+		strconv.Itoa(config.Right.Port) + "/checkers/FileChecker/start"
+	res2, err := http.Post(rightURL, "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	io.Copy(os.Stdout, res2.Body)
+	res2.Body.Close()
+
+	return nil
 }
 
 func checkFCProgress(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
@@ -152,6 +159,63 @@ func fetchFCResults(host Host) (ps []checker.Pair, err error) {
 		strconv.Itoa(host.Port) + "/checkers/FileChecker/results")
 	if err != nil {
 		log.Fatal(err)
+	}
+	err = json.NewDecoder(res.Body).Decode(&ps)
+	return
+}
+
+func startPC(config RunConf) error {
+	rbody, err := json.Marshal(config.PackageCheckerConf)
+	if err != nil {
+		return err
+	}
+	leftURL := "http://" + config.Left.HostName + ":" +
+		strconv.Itoa(config.Left.Port) + "/checkers/PackageChecker/start"
+	res, err := http.Post(leftURL, "application/json", bytes.NewBuffer(rbody))
+	if err != nil {
+		return err
+	}
+	io.Copy(os.Stdout, res.Body)
+	res.Body.Close()
+	rightURL := "http://" + config.Right.HostName + ":" +
+		strconv.Itoa(config.Right.Port) + "/checkers/PackageChecker/start"
+	res2, err := http.Post(rightURL, "application/json", bytes.NewBuffer(rbody))
+	if err != nil {
+		return err
+	}
+	io.Copy(os.Stdout, res2.Body)
+	res2.Body.Close()
+	return nil
+}
+
+func fetchPCStatus(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for {
+		time.Sleep(2 * time.Second)
+		res, err := http.Get("http://" + host.HostName + ":" +
+			strconv.Itoa(host.Port) + "/checkers/PackageChecker/status")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer res.Body.Close()
+		rep := StatusRep{}
+		err = json.NewDecoder(res.Body).Decode(&rep)
+		rep.Host = host.HostName
+		if err != nil {
+			log.Fatal(err)
+		}
+		resc <- rep
+		if rep.Progress == "done" {
+			break
+		}
+	}
+}
+
+func fetchPCResults(host Host) (ps []checker.Pair, err error) {
+	res, err := http.Get("http://" + host.HostName + ":" +
+		strconv.Itoa(host.Port) + "/checker/PackageChecker/results")
+	if err != nil {
+		return nil, err
 	}
 	err = json.NewDecoder(res.Body).Decode(&ps)
 	return
