@@ -25,6 +25,7 @@ func startServer() {
 	router.HandleFunc("/checkers/FileChecker/start", startFileChecker).Methods("POST")
 	router.HandleFunc("/checkers/FileChecker/status", getFCStatus).Methods("GET")
 	router.HandleFunc("/checkers/FileChecker/results", getFCResults).Methods("GET")
+	router.HandleFunc("/checkers/PackageChecker/start", startPackageChecker).Methods("POST")
 	log.Fatal(http.ListenAndServe("0.0.0.0:8000", router))
 }
 
@@ -63,11 +64,19 @@ func getFCResults(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-func startRPMChecker(w http.ResponseWriter, r *http.Request) {
+func startPackageChecker(w http.ResponseWriter, r *http.Request) {
 	config := make(map[string]string)
 	config["manager"] = "rpm"
 	go pmc.Collect(config)
 	log.Println("Collecting packages...")
 	w.Header()
 	w.Write([]byte(`{"Status": "OK"}\n`))
+}
+
+func getPCStatus(w http.ResponseWriter, r *http.Request) {
+	// TODO
+}
+
+func getPCResults(w http.ResponseWriter, r *http.Request) {
+	// TODO
 }
