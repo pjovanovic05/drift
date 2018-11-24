@@ -58,20 +58,31 @@ func startClient(runConf, reportFN string) {
 	if err = json.Unmarshal(confStr, &runConfig); err != nil {
 		log.Fatalf("JSON unmarshaling failed: %s\n", err)
 	}
+
+	resc := make(chan StatusRep)
+
 	// start file checkers
 	if runConfig.FileCheckerConf.Path != "" {
 		err = startFC(runConfig)
 		if err != nil {
 			log.Fatalf("Error starting FileChecker on targets: %s\n", err)
 		}
+		wg.Add(2)
+		go checkFCProgress(runConfig.Left, resc, &wg)
+		go checkFCProgress(runConfig.Right, resc, &wg)
 	}
-	// TODO: start other checkers
-	resc := make(chan StatusRep)
-	wg.Add(2)
-	go checkFCProgress(runConfig.Left, resc, &wg)
-	go checkFCProgress(runConfig.Right, resc, &wg)
 
-	// closer
+	if runConfig.PackageCheckerConf.Manager != "" {
+		err = startPC(runConfig)
+		if err != nil {
+			log.Fatal(err)
+		}
+		wg.Add(2)
+		go fetchPCStatus(runConfig.Left, resc, &wg)
+		go fetchPCStatus(runConfig.Right, resc, &wg)
+	}
+
+	// closer, waits for status checks to finish
 	go func() {
 		wg.Wait()
 		close(resc)
@@ -81,27 +92,53 @@ func startClient(runConf, reportFN string) {
 	for res := range resc {
 		fmt.Println(res.Host + ": " + res.Progress)
 	}
-	// when done, get results
-	psL, err := fetchFCResults(runConfig.Left)
-	if err != nil {
-		log.Fatal(err)
-	}
-	psR, err := fetchFCResults(runConfig.Right)
-	if err != nil {
-		log.Fatal(err)
-	}
-	ds, err := differ.Diff(psL, psR)
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	html, err := differ.GetHtmlReport(ds)
-	if err != nil {
-		log.Fatal(err)
+	// when done, get results and make reports
+	if runConfig.FileCheckerConf.Path != "" {
+		psL, err := fetchFCResults(runConfig.Left)
+		if err != nil {
+			log.Fatal(err)
+		}
+		psR, err := fetchFCResults(runConfig.Right)
+		if err != nil {
+			log.Fatal(err)
+		}
+		ds, err := differ.Diff(psL, psR)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		html, err := differ.GetHtmlReport(ds)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = ioutil.WriteFile("test.html", []byte(html), 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
-	err = ioutil.WriteFile("test.html", []byte(html), 0644)
-	if err != nil {
-		log.Fatal(err)
+	if runConfig.PackageCheckerConf.Manager != "" {
+		psL, err := fetchPCResults(runConfig.Left)
+		if err != nil {
+			log.Fatal(err)
+		}
+		psR, err := fetchPCResults(runConfig.Right)
+		if err != nil {
+			log.Fatal(err)
+		}
+		ds, err := differ.Diff(psL, psR)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		html, err := differ.GetHtmlReport(ds)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = ioutil.WriteFile("packages.html", []byte(html), 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -143,12 +180,12 @@ func checkFCProgress(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
 		defer res.Body.Close()
 		rep := StatusRep{}
 		err = json.NewDecoder(res.Body).Decode(&rep)
-		rep.Host = host.HostName
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Error unmarshalling status report for FileChecker: %s\n", err)
 		}
+		rep.Host = host.HostName
 		resc <- rep
-		if rep.Progress == "done" {
+		if rep.Progress == "file collection done" {
 			break
 		}
 	}
@@ -200,12 +237,12 @@ func fetchPCStatus(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
 		defer res.Body.Close()
 		rep := StatusRep{}
 		err = json.NewDecoder(res.Body).Decode(&rep)
-		rep.Host = host.HostName
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Error unmarshalling status rep. for package checker [%s]: %s\n", host.HostName, err)
 		}
+		rep.Host = host.HostName
 		resc <- rep
-		if rep.Progress == "done" {
+		if rep.Progress == "package collection done" {
 			break
 		}
 	}
@@ -213,7 +250,7 @@ func fetchPCStatus(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
 
 func fetchPCResults(host Host) (ps []checker.Pair, err error) {
 	res, err := http.Get("http://" + host.HostName + ":" +
-		strconv.Itoa(host.Port) + "/checker/PackageChecker/results")
+		strconv.Itoa(host.Port) + "/checkers/PackageChecker/results")
 	if err != nil {
 		return nil, err
 	}

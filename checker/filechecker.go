@@ -81,7 +81,7 @@ func (fc *FileChecker) Collect(config map[string]string) {
 		return fc.collected[i].Key < fc.collected[j].Key
 	})
 	fc.mu.Lock()
-	fc.progress = "done"
+	fc.progress = "file collection done"
 	fc.mu.Unlock()
 }
 

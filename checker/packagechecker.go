@@ -2,7 +2,6 @@ package checker
 
 import (
 	"errors"
-	"log"
 	"os/exec"
 	"sort"
 	"strings"
@@ -26,13 +25,18 @@ func (pmc *PackageChecker) Collect(config map[string]string) {
 	}
 	// rpm -qa --queryformat "%{NAME},%{VERSION}\n"
 	output, err := exec.Command("rpm", "-qa", "--queryformat",
-		`"%{NAME},%{VERSION}\n"`).CombinedOutput()
+		`%{NAME},%{VERSION}\n`).CombinedOutput()
 	if err != nil {
-		log.Fatal(err)
+		pmc.err = err
+		// log.Fatal(err)
 	}
 	lines := strings.Split(string(output), "\n")
 	// convert csv output string to list of packages => collected
 	for _, line := range lines {
+		if len(line) == 0 {
+			continue
+		}
+		// log.Println("collected:", line)
 		kv := strings.Split(line, ",")
 		pmc.collected = append(pmc.collected, Pair{Key: kv[0], Value: kv[1]})
 	}
@@ -40,7 +44,7 @@ func (pmc *PackageChecker) Collect(config map[string]string) {
 	sort.SliceStable(pmc.collected, func(i, j int) bool {
 		return pmc.collected[i].Key < pmc.collected[j].Key
 	})
-	pmc.progress = "done"
+	pmc.progress = "package collection done"
 }
 
 func (pmc *PackageChecker) Progress() string {

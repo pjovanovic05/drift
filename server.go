@@ -26,6 +26,8 @@ func startServer() {
 	router.HandleFunc("/checkers/FileChecker/status", getFCStatus).Methods("GET")
 	router.HandleFunc("/checkers/FileChecker/results", getFCResults).Methods("GET")
 	router.HandleFunc("/checkers/PackageChecker/start", startPackageChecker).Methods("POST")
+	router.HandleFunc("/checkers/PackageChecker/status", getPCStatus).Methods("GET")
+	router.HandleFunc("/checkers/PackageChecker/results", getPCResults).Methods("GET")
 	log.Fatal(http.ListenAndServe("0.0.0.0:8000", router))
 }
 
@@ -36,9 +38,9 @@ func startFileChecker(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 	go fc.Collect(config)
-	log.Println("Collection started...")
+	log.Println("Collecting files...")
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte("{\"Status\":\"OK\"}\n"))
+	w.Write([]byte("{\"Status\": \"OK\"}\n"))
 }
 
 func getFCStatus(w http.ResponseWriter, r *http.Request) {
@@ -69,14 +71,29 @@ func startPackageChecker(w http.ResponseWriter, r *http.Request) {
 	config["manager"] = "rpm"
 	go pmc.Collect(config)
 	log.Println("Collecting packages...")
-	w.Header()
-	w.Write([]byte(`{"Status": "OK"}\n`))
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte("{\"Status\": \"OK\"}\n"))
 }
 
 func getPCStatus(w http.ResponseWriter, r *http.Request) {
-	// TODO
+	rep := StatusRep{Progress: pmc.Progress()}
+	data, err := json.Marshal(rep)
+	if err != nil {
+		log.Fatal(err)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
 }
 
 func getPCResults(w http.ResponseWriter, r *http.Request) {
-	// TODO
+	collected, err := pmc.GetCollected()
+	if err != nil {
+		log.Fatal(err)
+	}
+	data, err := json.Marshal(collected)
+	if err != nil {
+		log.Fatal(err)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
 }
