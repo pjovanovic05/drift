@@ -238,7 +238,8 @@ func fetchPCStatus(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
 		rep := StatusRep{}
 		err = json.NewDecoder(res.Body).Decode(&rep)
 		if err != nil {
-			log.Fatalf("Error unmarshalling status rep. for package checker [%s]: %s\n", host.HostName, err)
+			log.Fatalf("Error unmarshalling status rep. for package checker [%s]: %s\n",
+				host.HostName, err)
 		}
 		rep.Host = host.HostName
 		resc <- rep
