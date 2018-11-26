@@ -47,6 +47,7 @@ func (uc *UserChecker) Collect(config map[string]string) {
 			log.Fatal(err)
 		}
 		// TODO: sta sve od korisnika da sacuvam kao value?
+		log.Println(usr.Gid)
 	}
 }
 
