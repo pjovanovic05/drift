@@ -29,11 +29,3 @@ type BasicChecker struct {
 	collected []Pair
 	err       error
 }
-
-type UserChecker struct {
-	BasicChecker
-}
-
-type ACLChecker struct {
-	BasicChecker
-}
