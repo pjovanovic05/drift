@@ -1,8 +1,8 @@
 package checker
 
 import (
-	"log"
 	"os"
+		"log"
 	"sync"
 )
 
