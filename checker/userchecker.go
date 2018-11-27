@@ -1,6 +1,7 @@
 package checker
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -14,10 +15,8 @@ type UserChecker struct {
 	mu sync.Mutex
 }
 
-// Collect user and group info from /etc passwd and group files.
+// Collect user info from /etc/passwd files.
 func (uc *UserChecker) Collect(config map[string]string) {
-	// TODO: parse users and groups from /etc/passwd and /etc/group
-	// https://www.socketloop.com/tutorials/golang-get-all-local-users-and-print-out-their-home-directory-description-and-group-id
 	passwd, err := os.Open("/etc/passwd")
 	if err != nil {
 		log.Fatal(err)
@@ -46,9 +45,17 @@ func (uc *UserChecker) Collect(config map[string]string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		// TODO: sta sve od korisnika da sacuvam kao value?
-		log.Println(usr.Gid)
+		valueline := fmt.Sprintf("%s, %s, %s", usr.Uid, usr.Gid, usr.HomeDir)
+		groups, err := usr.GroupIds()
+		if err != nil {
+			log.Fatal(err)
+		}
+		gs := strings.Join(groups, ",")
+		valueline = valueline + "," + gs
+		uc.collected = append(uc.collected, Pair{Key: usr.Username, Value: valueline})
 	}
+	// TODO: sort collected
+	uc.progress = "done"
 }
 
 func (uc *UserChecker) Progress() string {

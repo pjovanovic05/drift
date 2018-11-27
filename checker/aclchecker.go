@@ -1,17 +1,27 @@
 package checker
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 )
 
+// ACLChecker collects info about file access rights.
 type ACLChecker struct {
 	BasicChecker
 	mu sync.Mutex
 }
 
+// Collect gathers info about file access rights. Takess
+// configuration params:
+// psth - target path
+// skips = column (:) separated list of paths to skip
+// Returns:
+// key: path, value: acl, uid, gid
+// Remark: works only on linux
 func (aclc *ACLChecker) Collect(config map[string]string) {
 	// TODO:
 	aclc.mu.Lock()
@@ -33,14 +43,16 @@ func (aclc *ACLChecker) Collect(config map[string]string) {
 			}
 			return nil
 		}
+		uid := info.Sys().(*syscall.Stat_t).Uid
+		gid := info.Sys().(*syscall.Stat_t).Gid
+		recline := fmt.Sprintf("%s, %d, %d", info.Mode().String(), uid, gid)
 		aclc.mu.Lock()
-		B
-		aclc.collected = append(aclc.collected, Pair{Key: path, Value: info.Mode().String()})
+		aclc.collected = append(aclc.collected, Pair{Key: path, Value: recline})
 		aclc.progress = path
 		aclc.mu.Unlock()
-		// TODO: get owner uid and gid:
-		// https://groups.google.com/forum/#!topic/golang-nuts/ywS7xQYJkHY
+		return nil
 	})
+	// TODO: sort collected
 }
 
 func (aclc *ACLChecker) Progress() string {

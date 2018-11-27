@@ -97,3 +97,6 @@ func getPCResults(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(data)
 }
+
+// TODO: api za aclchecker
+// TODO: api za userchecker
