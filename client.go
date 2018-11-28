@@ -27,6 +27,8 @@ type Host struct {
 type RunConf struct {
 	Left            Host
 	Right           Host
+	SSL             bool
+	KeyVerify       bool
 	FileCheckerConf struct {
 		Path  string `json:"path"`
 		Skips string `json:"skips"`
@@ -148,7 +150,15 @@ func startFC(config RunConf) error {
 	if err != nil {
 		return err
 	}
-	leftURL := "http://" + config.Left.HostName + ":" +
+	protocol := "http"
+	auth := ""
+	if config.SSL {
+		protocol += "s"
+	}
+	if config.Left.Password != "" {
+		auth = "admin:" + config.Left.Password
+	}
+	leftURL := protocol + "://" + config.Left.HostName + ":" +
 		strconv.Itoa(config.Left.Port) + "/checkers/FileChecker/start"
 	res, err := http.Post(leftURL, "application/json", bytes.NewBuffer(body))
 	if err != nil {

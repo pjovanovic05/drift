@@ -5,13 +5,15 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 )
 
 var (
-	fc  checker.FileChecker
-	pmc checker.PackageChecker
+	fc     checker.FileChecker
+	pmc    checker.PackageChecker
+	passwd string
 )
 
 //StatusRep is checker status report.
@@ -20,7 +22,8 @@ type StatusRep struct {
 	Progress string
 }
 
-func startServer() {
+func startServer(port int, password, cert, key string) {
+	passwd = password
 	router := mux.NewRouter()
 	router.HandleFunc("/checkers/FileChecker/start", startFileChecker).Methods("POST")
 	router.HandleFunc("/checkers/FileChecker/status", getFCStatus).Methods("GET")
@@ -28,7 +31,29 @@ func startServer() {
 	router.HandleFunc("/checkers/PackageChecker/start", startPackageChecker).Methods("POST")
 	router.HandleFunc("/checkers/PackageChecker/status", getPCStatus).Methods("GET")
 	router.HandleFunc("/checkers/PackageChecker/results", getPCResults).Methods("GET")
-	log.Fatal(http.ListenAndServe("0.0.0.0:8000", router))
+	// log.Fatal(http.ListenAndServe("0.0.0.0:"+strconv.Itoa(port), router))
+	err := http.ListenAndServeTLS("0.0.0.0:"+strconv.Itoa(port), cert, key, router)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func basicAuth(fn http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, pass, ok := r.BasicAuth()
+		if !ok || !checkAuth(user, pass) {
+			w.Header().Set("WWW-Authenticate",
+				`Basic realm="please enter your username and password"`)
+			w.WriteHeader(401)
+			w.Write([]byte("Unauthorized.\n"))
+			return
+		}
+		fn(w, r)
+	}
+}
+
+func checkAuth(user, pass string) bool {
+	return user == "admin" && pass == passwd
 }
 
 func startFileChecker(w http.ResponseWriter, r *http.Request) {
