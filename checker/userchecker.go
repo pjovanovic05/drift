@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/user"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -40,6 +41,7 @@ func (uc *UserChecker) Collect(config map[string]string) {
 
 	uc.mu.Lock()
 	defer uc.mu.Unlock()
+	uc.collected = uc.collected[:0]
 	for _, name := range users {
 		usr, err := user.Lookup(name)
 		if err != nil {
@@ -54,8 +56,10 @@ func (uc *UserChecker) Collect(config map[string]string) {
 		valueline = valueline + "," + gs
 		uc.collected = append(uc.collected, Pair{Key: usr.Username, Value: valueline})
 	}
-	// TODO: sort collected
-	uc.progress = "done"
+	sort.SliceStable(uc.collected, func(i, j int) bool {
+		return uc.collected[i].Key < uc.collected[j].Key
+	})
+	uc.progress = "user collection done"
 }
 
 func (uc *UserChecker) Progress() string {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"syscall"
@@ -23,7 +24,6 @@ type ACLChecker struct {
 // key: path, value: acl, uid, gid
 // Remark: works only on linux
 func (aclc *ACLChecker) Collect(config map[string]string) {
-	// TODO:
 	aclc.mu.Lock()
 	aclc.collected = aclc.collected[:0]
 	aclc.mu.Unlock()
@@ -52,7 +52,15 @@ func (aclc *ACLChecker) Collect(config map[string]string) {
 		aclc.mu.Unlock()
 		return nil
 	})
-	// TODO: sort collected
+	aclc.mu.Lock()
+	aclc.progress = "sorting..."
+	aclc.mu.Unlock()
+	sort.SliceStable(aclc.collected, func(i, j int) bool {
+		return aclc.collected[i].Key < aclc.collected[j].Key
+	})
+	aclc.mu.Lock()
+	aclc.progress = "acl collection done"
+	aclc.mu.Unlock()
 }
 
 func (aclc *ACLChecker) Progress() string {

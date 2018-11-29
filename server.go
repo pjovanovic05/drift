@@ -13,6 +13,8 @@ import (
 var (
 	fc     checker.FileChecker
 	pmc    checker.PackageChecker
+	aclc   checker.ACLChecker
+	uc     checker.UserChecker
 	passwd string
 )
 
@@ -123,5 +125,64 @@ func getPCResults(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-// TODO: api za aclchecker
-// TODO: api za userchecker
+func startACLC(w http.ResponseWriter, r *http.Request) {
+	config := make(map[string]string)
+	go aclc.Collect(config)
+	log.Println("Collecting acls...")
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte("{\"Status\": \"OK\"}\n"))
+}
+
+func getACLCStatus(w http.ResponseWriter, r *http.Request) {
+	rep := StatusRep{Progress: aclc.Progress()}
+	data, err := json.Marshal(rep)
+	if err != nil {
+		log.Fatal(err)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
+}
+
+func getACLCResults(w http.ResponseWriter, r *http.Request) {
+	collected, err := aclc.GetCollected()
+	if err != nil {
+		log.Fatal(err)
+	}
+	data, err := json.Marshal(collected)
+	if err != nil {
+		log.Fatal(err)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
+}
+
+func startUC(w http.ResponseWriter, r *http.Request) {
+	config := make(map[string]string)
+	go uc.Collect(config)
+	log.Println("Collecting users...")
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte("{\"Status\": \"OK\"}\n"))
+}
+
+func getUCStatus(w http.ResponseWriter, r *http.Request) {
+	rep := StatusRep{Progress: uc.Progress()}
+	data, err := json.Marshal(rep)
+	if err != nil {
+		log.Fatal(err)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
+}
+
+func getUCResults(w http.ResponseWriter, r *http.Request) {
+	collected, err := uc.GetCollected()
+	if err != nil {
+		log.Fatal(err)
+	}
+	data, err := json.Marshal(collected)
+	if err != nil {
+		log.Fatal(err)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
+}

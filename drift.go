@@ -38,7 +38,3 @@ func main() {
 		startClient(*runConfig, *reportFN)
 	}
 }
-
-// TODO: get password: https://stackoverflow.com/questions/2137357/getpasswd-functionality-in-go
-// TODO: make https connections
-// TODO: make http basic auth
