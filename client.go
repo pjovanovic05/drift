@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"drift/checker"
 	"drift/differ"
 	"encoding/json"
@@ -18,17 +19,30 @@ import (
 
 // Host describes one host for checking.
 type Host struct {
-	HostName string
-	Password string
-	Port     int
+	HostName  string
+	Password  string
+	Port      int
+	SSL       bool
+	KeyVerify bool
+}
+
+// GetBaseURL generates base url for http(s) requests on this host.
+func (h *Host) GetBaseURL() string {
+	protocol := "http"
+	auth := ""
+	if h.SSL {
+		protocol += "s"
+	}
+	if h.Password != "" {
+		auth = "admin:" + h.Password + "@"
+	}
+	return protocol + "://" + auth + h.HostName + ":" + strconv.Itoa(h.Port)
 }
 
 // RunConf holds run configuration for hosts to be checked and checks to be executed.
 type RunConf struct {
 	Left            Host
 	Right           Host
-	SSL             bool
-	KeyVerify       bool
 	FileCheckerConf struct {
 		Path  string `json:"path"`
 		Skips string `json:"skips"`
@@ -60,8 +74,12 @@ func startClient(runConf, reportFN string) {
 	if err = json.Unmarshal(confStr, &runConfig); err != nil {
 		log.Fatalf("JSON unmarshaling failed: %s\n", err)
 	}
-
 	resc := make(chan StatusRep)
+
+	// Skip https key verification on client
+	if !runConfig.Left.KeyVerify {
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
 
 	// start file checkers
 	if runConfig.FileCheckerConf.Path != "" {
@@ -150,24 +168,14 @@ func startFC(config RunConf) error {
 	if err != nil {
 		return err
 	}
-	protocol := "http"
-	auth := ""
-	if config.SSL {
-		protocol += "s"
-	}
-	if config.Left.Password != "" {
-		auth = "admin:" + config.Left.Password
-	}
-	leftURL := protocol + "://" + config.Left.HostName + ":" +
-		strconv.Itoa(config.Left.Port) + "/checkers/FileChecker/start"
+	leftURL := config.Left.GetBaseURL() + "/checkers/FileChecker/start"
 	res, err := http.Post(leftURL, "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
 	io.Copy(os.Stdout, res.Body)
 	res.Body.Close()
-	rightURL := "http://" + config.Right.HostName + ":" +
-		strconv.Itoa(config.Right.Port) + "/checkers/FileChecker/start"
+	rightURL := config.Right.GetBaseURL() + "/checkers/FileChecker/start"
 	res2, err := http.Post(rightURL, "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		return err
@@ -182,8 +190,7 @@ func checkFCProgress(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {
 		time.Sleep(2 * time.Second)
-		res, err := http.Get("http://" + host.HostName + ":" +
-			strconv.Itoa(host.Port) + "/checkers/FileChecker/status")
+		res, err := http.Get(host.GetBaseURL() + "/checkers/FileChecker/status")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -202,8 +209,7 @@ func checkFCProgress(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
 }
 
 func fetchFCResults(host Host) (ps []checker.Pair, err error) {
-	res, err := http.Get("http://" + host.HostName + ":" +
-		strconv.Itoa(host.Port) + "/checkers/FileChecker/results")
+	res, err := http.Get(host.GetBaseURL() + "/checkers/FileChecker/results")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -216,16 +222,14 @@ func startPC(config RunConf) error {
 	if err != nil {
 		return err
 	}
-	leftURL := "http://" + config.Left.HostName + ":" +
-		strconv.Itoa(config.Left.Port) + "/checkers/PackageChecker/start"
+	leftURL := config.Left.GetBaseURL() + "/checkers/PackageChecker/start"
 	res, err := http.Post(leftURL, "application/json", bytes.NewBuffer(rbody))
 	if err != nil {
 		return err
 	}
 	io.Copy(os.Stdout, res.Body)
 	res.Body.Close()
-	rightURL := "http://" + config.Right.HostName + ":" +
-		strconv.Itoa(config.Right.Port) + "/checkers/PackageChecker/start"
+	rightURL := config.Right.GetBaseURL() + "/checkers/PackageChecker/start"
 	res2, err := http.Post(rightURL, "application/json", bytes.NewBuffer(rbody))
 	if err != nil {
 		return err
@@ -239,8 +243,7 @@ func fetchPCStatus(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {
 		time.Sleep(2 * time.Second)
-		res, err := http.Get("http://" + host.HostName + ":" +
-			strconv.Itoa(host.Port) + "/checkers/PackageChecker/status")
+		res, err := http.Get(host.GetBaseURL() + "/checkers/PackageChecker/status")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -260,8 +263,7 @@ func fetchPCStatus(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
 }
 
 func fetchPCResults(host Host) (ps []checker.Pair, err error) {
-	res, err := http.Get("http://" + host.HostName + ":" +
-		strconv.Itoa(host.Port) + "/checkers/PackageChecker/results")
+	res, err := http.Get(host.GetBaseURL() + "/checkers/PackageChecker/results")
 	if err != nil {
 		return nil, err
 	}

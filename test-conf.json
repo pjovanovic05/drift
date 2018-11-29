@@ -1,11 +1,17 @@
 {
     "Left": {
         "HostName": "192.168.50.5",
-        "Port": 8000
+        "Port": 8000,
+        "SSL": true,
+        "KeyVerify": false,
+        "Password": "pancerfaust"
     },
     "Right": {
         "HostName": "192.168.50.6",
-        "Port": 8000
+        "Port": 8000,
+        "SSL": true,
+        "KeyVerify": false,
+        "Password": "pancerfaust"
     },
     "FileCheckerConf": {
         "path": "/",

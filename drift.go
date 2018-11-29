@@ -28,11 +28,12 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		fmt.Println() // newline after password input
 		password = string(bytePass)
 	}
 
 	if *isServer {
-		startServer(port, password, *cert, *key)
+		startServer(*port, password, *cert, *key)
 	} else {
 		startClient(*runConfig, *reportFN)
 	}
