@@ -51,6 +51,10 @@ type RunConf struct {
 	PackageCheckerConf struct {
 		Manager string `json:"manager"`
 	}
+	ACLChecker struct {
+		Path  string `json:"path"`
+		Skips string `json:"skips"`
+	}
 }
 
 // CLI client that takes json config of hosts to target, and generates html report.
@@ -88,8 +92,8 @@ func startClient(runConf, reportFN string) {
 			log.Fatalf("Error starting FileChecker on targets: %s\n", err)
 		}
 		wg.Add(2)
-		go checkFCProgress(runConfig.Left, resc, &wg)
-		go checkFCProgress(runConfig.Right, resc, &wg)
+		go fetchFCProgress(runConfig.Left, resc, &wg)
+		go fetchFCProgress(runConfig.Right, resc, &wg)
 	}
 
 	if runConfig.PackageCheckerConf.Manager != "" {
@@ -186,7 +190,7 @@ func startFC(config RunConf) error {
 	return nil
 }
 
-func checkFCProgress(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
+func fetchFCProgress(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {
 		time.Sleep(2 * time.Second)
@@ -269,4 +273,107 @@ func fetchPCResults(host Host) (ps []checker.Pair, err error) {
 	}
 	err = json.NewDecoder(res.Body).Decode(&ps)
 	return
+}
+
+func startACLC(config RunConf) error {
+	rbody, err := json.Marshal(config.ACLChecker)
+	if err != nil {
+		return err
+	}
+	leftURL := config.Left.GetBaseURL() + "/checkers/ACLChecker/start"
+	res, err := http.Post(leftURL, "application/json", bytes.NewBuffer(rbody))
+	if err != nil {
+		return err
+	}
+	io.Copy(os.Stdout, res.Body)
+	res.Body.Close()
+	rightURL := config.Right.GetBaseURL() + "/checkers/ACLChecker/start"
+	res2, err := http.Post(rightURL, "application/json", bytes.NewBuffer(rbody))
+	if err != nil {
+		return err
+	}
+	io.Copy(os.Stdout, res2.Body)
+	res2.Body.Close()
+	return nil
+}
+
+func fetchACLCStatus(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for {
+		time.Sleep(2 * time.Second)
+		res, err := http.Get(host.GetBaseURL() + "/checkers/ACLChecker/status")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer res.Body.Close()
+		rep := StatusRep{}
+		err = json.NewDecoder(res.Body).Decode(&rep)
+		if err != nil {
+			log.Fatalf("Error unmarshalling status rep. for acl checkers [%s]: %s\n",
+				host.HostName, err)
+		}
+		rep.Host = host.HostName
+		resc <- rep
+		if rep.Progress == "acl collection done" {
+			break
+		}
+	}
+}
+
+func fetchACLCResults(host Host) (ps []checker.Pair, err error) {
+	res, err := http.Get(host.GetBaseURL() + "/checkers/ACLChecker/results")
+	if err != nil {
+		return nil, err
+	}
+	err = json.NewDecoder(res.Body).Decode(&ps)
+	return
+}
+
+func startUC(config RunConf) error {
+	rbody, err := json.Marshal(config.UserCheckerConf)
+	if err != nil {
+		return err
+	}
+	leftURL := config.Left.GetBaseURL() + "/checkers/UChecker/start"
+	res, err := http.Post(leftURL, "application/json", bytes.NewBuffer(rbody))
+	if err != nil {
+		return err
+	}
+	io.Copy(os.Stdout, res.Body)
+	res.Body.Close()
+	rightURL := config.Right.GetBaseURL() + "/checkers/UChecker/start"
+	res2, err := http.Post(rightURL, "application/json", bytes.NewBuffer(rbody))
+	if err != nil {
+		return err
+	}
+	io.Copy(os.Stdout, res2.Body)
+	res2.Body.Close()
+	return nil
+}
+
+func fetchUCStatus(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for {
+		time.Sleep(2 * time.Second)
+		res, err := http.Get(host.GetBaseURL() + "/checkers/UChecker/status")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer res.Body.Close()
+		rep := StatusRep{}
+		err = json.NewDecoder(res.Body).Decode(&rep)
+		if err != nil {
+			log.Fatalf("Error unmarshalling status rep. for user checkers [%s]: %s\n",
+				host.HostName, err)
+		}
+		rep.Host = host.HostName
+		resc <- rep
+		if rep.Progress == "user collection done" {
+			break
+		}
+	}
+}
+
+func fetchUCResults(host Host) (ps []checker.Pair, err error) {
+
 }

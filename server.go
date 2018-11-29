@@ -33,6 +33,12 @@ func startServer(port int, password, cert, key string) {
 	router.HandleFunc("/checkers/PackageChecker/start", startPackageChecker).Methods("POST")
 	router.HandleFunc("/checkers/PackageChecker/status", getPCStatus).Methods("GET")
 	router.HandleFunc("/checkers/PackageChecker/results", getPCResults).Methods("GET")
+	router.HandleFunc("/checkers/ACLChecker/start", startACLChecker).Methods("POST")
+	router.HandleFunc("/checkers/ACLChecker/status", getACLCStatus).Methods("GET")
+	router.HandleFunc("/checkers/ACLChecker/results", getACLCResults).Methods("GET")
+	router.HandleFunc("/checkers/UserChecker/start", startUserChecker).Methods("POST")
+	router.HandleFunc("/checkers/UserChecker/status", getUCStatus).Methods("GET")
+	router.HandleFunc("/checkers/UserChecker/results", getUCResults).Methods("GET")
 	// log.Fatal(http.ListenAndServe("0.0.0.0:"+strconv.Itoa(port), router))
 	err := http.ListenAndServeTLS("0.0.0.0:"+strconv.Itoa(port), cert, key, router)
 	if err != nil {
@@ -125,7 +131,7 @@ func getPCResults(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-func startACLC(w http.ResponseWriter, r *http.Request) {
+func startACLChecker(w http.ResponseWriter, r *http.Request) {
 	config := make(map[string]string)
 	go aclc.Collect(config)
 	log.Println("Collecting acls...")
@@ -156,7 +162,7 @@ func getACLCResults(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-func startUC(w http.ResponseWriter, r *http.Request) {
+func startUserChecker(w http.ResponseWriter, r *http.Request) {
 	config := make(map[string]string)
 	go uc.Collect(config)
 	log.Println("Collecting users...")
