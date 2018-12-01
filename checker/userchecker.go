@@ -35,6 +35,9 @@ func (uc *UserChecker) Collect(config map[string]string) {
 		if comment := strings.Index(line, "#"); comment >= 0 {
 			continue
 		}
+		if line == "" {
+			continue
+		}
 		comps := strings.Split(line, ":")
 		if len(comps) > 0 {
 			match, err := regexp.MatchString(config["Pattern"], comps[0])
@@ -62,8 +65,8 @@ func (uc *UserChecker) Collect(config map[string]string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		gs := strings.Join(groups, ",")
-		valueline = valueline + "," + gs
+		gs := strings.Join(groups, ", ")
+		valueline = valueline + ", " + gs
 		uc.collected = append(uc.collected, Pair{Key: usr.Username, Value: valueline})
 	}
 	sort.SliceStable(uc.collected, func(i, j int) bool {

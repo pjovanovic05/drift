@@ -393,6 +393,7 @@ func fetchACLCResults(host Host) (ps []checker.Pair, err error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Println(">>> ACLC results")
 	err = json.NewDecoder(res.Body).Decode(&ps)
 	return
 }
@@ -443,10 +444,11 @@ func fetchUCStatus(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
 }
 
 func fetchUCResults(host Host) (ps []checker.Pair, err error) {
-	res, err := http.Get(host.GetBaseURL() + "/checkers/UserChecker/restart")
+	res, err := http.Get(host.GetBaseURL() + "/checkers/UserChecker/results")
 	if err != nil {
 		return nil, err
 	}
+	log.Println(">>> UC results")
 	err = json.NewDecoder(res.Body).Decode(&ps)
 	return
 }

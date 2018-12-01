@@ -133,6 +133,10 @@ func getPCResults(w http.ResponseWriter, r *http.Request) {
 
 func startACLChecker(w http.ResponseWriter, r *http.Request) {
 	config := make(map[string]string)
+	err := json.NewDecoder(r.Body).Decode(&config)
+	if err != nil {
+		log.Fatal(err)
+	}
 	go aclc.Collect(config)
 	log.Println("Collecting acls...")
 	w.Header().Set("Content-Type", "application/json")

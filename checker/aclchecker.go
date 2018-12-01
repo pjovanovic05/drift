@@ -24,9 +24,11 @@ type ACLChecker struct {
 // key: path, value: acl, uid, gid
 // Remark: works only on linux
 func (aclc *ACLChecker) Collect(config map[string]string) {
-	aclc.mu.Lock()
-	aclc.collected = aclc.collected[:0]
-	aclc.mu.Unlock()
+	if len(aclc.collected) > 0 {
+		aclc.mu.Lock()
+		aclc.collected = aclc.collected[:0]
+		aclc.mu.Unlock()
+	}
 	skipPaths := strings.Split(config["skips"], ":")
 	targetPath := config["path"]
 
