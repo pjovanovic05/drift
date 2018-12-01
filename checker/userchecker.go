@@ -46,7 +46,6 @@ func (uc *UserChecker) Collect(config map[string]string) {
 				break
 			}
 			if match {
-				log.Println("uname:", comps[0])
 				users = append(users, comps[0])
 			}
 		}
