@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/user"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -24,18 +25,27 @@ func (uc *UserChecker) Collect(config map[string]string) {
 	}
 	defer passwd.Close()
 	var users []string
-	lines, err := ioutil.ReadAll(passwd)
+	blines, err := ioutil.ReadAll(passwd)
 	if err != nil {
 		uc.err = err
 		return
 	}
+	lines := strings.Split(string(blines), "\n")
 	for _, line := range lines {
-		if comment := strings.Index(string(line), "#"); comment >= 0 {
+		if comment := strings.Index(line, "#"); comment >= 0 {
 			continue
 		}
-		comps := strings.Split(string(line), ":")
+		comps := strings.Split(line, ":")
 		if len(comps) > 0 {
-			users = append(users, comps[0])
+			match, err := regexp.MatchString(config["Pattern"], comps[0])
+			if err != nil {
+				uc.err = err
+				break
+			}
+			if match {
+				log.Println("uname:", comps[0])
+				users = append(users, comps[0])
+			}
 		}
 	}
 

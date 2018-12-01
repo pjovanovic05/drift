@@ -20,5 +20,12 @@
     },
     "PackageCheckerConf": {
         "manager": "rpm"
+    },
+    "UserCheckerConf": {
+      "Pattern": ".*"
+    },
+    "ACLCheckerConf": {
+      "path": "/",
+      "skips": "/tmp:/proc:/home:/dev:/boot:/var:/srv:/selinux:/sys"
     }
 }

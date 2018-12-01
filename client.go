@@ -51,9 +51,12 @@ type RunConf struct {
 	PackageCheckerConf struct {
 		Manager string `json:"manager"`
 	}
-	ACLChecker struct {
+	ACLCheckerConf struct {
 		Path  string `json:"path"`
 		Skips string `json:"skips"`
+	}
+	UserCheckerConf struct {
+		Pattern string
 	}
 }
 
@@ -104,6 +107,26 @@ func startClient(runConf, reportFN string) {
 		wg.Add(2)
 		go fetchPCStatus(runConfig.Left, resc, &wg)
 		go fetchPCStatus(runConfig.Right, resc, &wg)
+	}
+
+	if runConfig.UserCheckerConf.Pattern != "" {
+		err = startUC(runConfig)
+		if err != nil {
+			log.Fatal(err)
+		}
+		wg.Add(2)
+		go fetchUCStatus(runConfig.Left, resc, &wg)
+		go fetchUCStatus(runConfig.Right, resc, &wg)
+	}
+
+	if runConfig.ACLCheckerConf.Path != "" {
+		err = startACLC(runConfig)
+		if err != nil {
+			log.Fatal(err)
+		}
+		wg.Add(2)
+		go fetchACLCStatus(runConfig.Left, resc, &wg)
+		go fetchACLCStatus(runConfig.Right, resc, &wg)
 	}
 
 	// closer, waits for status checks to finish
@@ -160,6 +183,51 @@ func startClient(runConf, reportFN string) {
 			log.Fatal(err)
 		}
 		err = ioutil.WriteFile("packages.html", []byte(html), 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	if runConfig.UserCheckerConf.Pattern != "" {
+		psL, err := fetchUCResults(runConfig.Left)
+		if err != nil {
+			log.Fatal(err)
+		}
+		psR, err := fetchUCResults(runConfig.Right)
+		if err != nil {
+			log.Fatal(err)
+		}
+		ds, err := differ.Diff(psL, psR)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		html, err := differ.GetHtmlReport(ds)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = ioutil.WriteFile("users.html", []byte(html), 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	if runConfig.ACLCheckerConf.Path != "" {
+		psL, err := fetchACLCResults(runConfig.Left)
+		if err != nil {
+			log.Fatal(err)
+		}
+		psR, err := fetchACLCResults(runConfig.Right)
+		if err != nil {
+			log.Fatal(err)
+		}
+		ds, err := differ.Diff(psL, psR)
+		if err != nil {
+			log.Fatal(err)
+		}
+		html, err := differ.GetHtmlReport(ds)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = ioutil.WriteFile("acls.html", []byte(html), 0644)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -276,7 +344,7 @@ func fetchPCResults(host Host) (ps []checker.Pair, err error) {
 }
 
 func startACLC(config RunConf) error {
-	rbody, err := json.Marshal(config.ACLChecker)
+	rbody, err := json.Marshal(config.ACLCheckerConf)
 	if err != nil {
 		return err
 	}
@@ -334,14 +402,14 @@ func startUC(config RunConf) error {
 	if err != nil {
 		return err
 	}
-	leftURL := config.Left.GetBaseURL() + "/checkers/UChecker/start"
+	leftURL := config.Left.GetBaseURL() + "/checkers/UserChecker/start"
 	res, err := http.Post(leftURL, "application/json", bytes.NewBuffer(rbody))
 	if err != nil {
 		return err
 	}
 	io.Copy(os.Stdout, res.Body)
 	res.Body.Close()
-	rightURL := config.Right.GetBaseURL() + "/checkers/UChecker/start"
+	rightURL := config.Right.GetBaseURL() + "/checkers/UserChecker/start"
 	res2, err := http.Post(rightURL, "application/json", bytes.NewBuffer(rbody))
 	if err != nil {
 		return err
@@ -355,7 +423,7 @@ func fetchUCStatus(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {
 		time.Sleep(2 * time.Second)
-		res, err := http.Get(host.GetBaseURL() + "/checkers/UChecker/status")
+		res, err := http.Get(host.GetBaseURL() + "/checkers/UserChecker/status")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -375,5 +443,10 @@ func fetchUCStatus(host Host, resc chan<- StatusRep, wg *sync.WaitGroup) {
 }
 
 func fetchUCResults(host Host) (ps []checker.Pair, err error) {
-
+	res, err := http.Get(host.GetBaseURL() + "/checkers/UserChecker/restart")
+	if err != nil {
+		return nil, err
+	}
+	err = json.NewDecoder(res.Body).Decode(&ps)
+	return
 }
