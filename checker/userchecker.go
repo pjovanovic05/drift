@@ -5,11 +5,12 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"os/user"
 	"regexp"
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/tweekmonster/luser"
 )
 
 type UserChecker struct {
@@ -55,7 +56,7 @@ func (uc *UserChecker) Collect(config map[string]string) {
 	defer uc.mu.Unlock()
 	uc.collected = uc.collected[:0]
 	for _, name := range users {
-		usr, err := user.Lookup(name)
+		usr, err := luser.Lookup(name)
 		if err != nil {
 			log.Fatal(err)
 		}
