@@ -147,9 +147,15 @@ var reportTemplate = `
         {{else if checkType .T ">"}}
         <tr class="rightnew collapse">
         {{end}}
-          <td>{{.Left.Key}}</td>
+          <td>
+            {{.Left.Key}}<br/>
+            {{.Left.Value}}
+          </td>
           <td>{{.T | showDiffType}}</td>
-          <td>{{.Right.Key}}</td>
+          <td>
+            {{.Right.Key}}<br/>
+            {{.Right.Value}}
+          </td>
         {{end}}
       </tbody>
     </table>
