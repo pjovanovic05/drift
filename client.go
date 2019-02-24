@@ -159,7 +159,7 @@ func startClient(runConf, reportFN string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = ioutil.WriteFile("test.html", []byte(html), 0644)
+		err = ioutil.WriteFile("files-report.html", []byte(html), 0644)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -182,7 +182,7 @@ func startClient(runConf, reportFN string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = ioutil.WriteFile("packages.html", []byte(html), 0644)
+		err = ioutil.WriteFile("packages-report.html", []byte(html), 0644)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -205,7 +205,7 @@ func startClient(runConf, reportFN string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = ioutil.WriteFile("users.html", []byte(html), 0644)
+		err = ioutil.WriteFile("users-report.html", []byte(html), 0644)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -227,7 +227,7 @@ func startClient(runConf, reportFN string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = ioutil.WriteFile("acls.html", []byte(html), 0644)
+		err = ioutil.WriteFile("acls-report.html", []byte(html), 0644)
 		if err != nil {
 			log.Fatal(err)
 		}

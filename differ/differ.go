@@ -65,7 +65,8 @@ func Diff(x, y []checker.Pair) (dr DiffResult, err error) {
 func GetHtmlReport(diffs DiffResult) (string, error) {
 	var outBuff bytes.Buffer
 	var diffReport = template.Must(template.New("diffreport").
-		Funcs(template.FuncMap{"showDiffType": showDiffType, "checkType": checkType}).Parse(reportTemplate))
+		Funcs(template.FuncMap{"showDiffType": showDiffType,
+			"checkType": checkType}).Parse(reportTemplate))
 	err := diffReport.Execute(&outBuff, diffs)
 	return outBuff.String(), err
 }
@@ -113,10 +114,22 @@ var reportTemplate = `
   <body>
     <div class="fixed-top tbar">
       Toggle:
-      <button class="btn btn-success" type="button" data-toggle="collapse" data-target=".equal">Equal</button>
-      <button class="btn btn-warning" type="button" data-toggle="collapse" data-target=".different">Different</button>
-      <button class="btn btn-primary" type="button" data-toggle="collapse" data-target=".leftnew">Left New</button>
-      <button class="btn btn-danger" type="button" data-toggle="collapse" data-target=".rightnew">Right New</button>
+      <button class="btn btn-success" 
+              type="button"
+              data-toggle="collapse"
+              data-target=".equal">Equal</button>
+      <button class="btn btn-warning"
+              type="button"
+              data-toggle="collapse"
+              data-target=".different">Different</button>
+      <button class="btn btn-primary"
+              type="button"
+              data-toggle="collapse"
+              data-target=".leftnew">Left New</button>
+      <button class="btn btn-danger"
+              type="button"
+              data-toggle="collapse"
+              data-target=".rightnew">Right New</button>
     </div>
     <br/><br/>
     <table class="table table-sm">
