@@ -40,7 +40,13 @@ func startServer(port int, password, cert, key string) {
 	router.HandleFunc("/checkers/UserChecker/status", getUCStatus).Methods("GET")
 	router.HandleFunc("/checkers/UserChecker/results", getUCResults).Methods("GET")
 	// log.Fatal(http.ListenAndServe("0.0.0.0:"+strconv.Itoa(port), router))
-	err := http.ListenAndServeTLS("0.0.0.0:"+strconv.Itoa(port), cert, key, router)
+	var err error
+	if len(cert) > 0 && len(key) > 0 {
+		err = http.ListenAndServeTLS("0.0.0.0:"+strconv.Itoa(port), cert, key, router)
+	} else {
+		err = http.ListenAndServe("0.0.0.0:"+strconv.Itoa(port), router)
+	}
+
 	if err != nil {
 		log.Fatal(err)
 	}
