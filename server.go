@@ -1,11 +1,12 @@
 package main
 
 import (
-	"drift/checker"
 	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/pjovanovic05/drift/checker"
 
 	"github.com/gorilla/mux"
 )

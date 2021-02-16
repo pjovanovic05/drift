@@ -3,8 +3,6 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
-	"drift/checker"
-	"drift/differ"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,6 +13,9 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/pjovanovic05/drift/checker"
+	"github.com/pjovanovic05/drift/differ"
 )
 
 // Host describes one host for checking.

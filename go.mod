@@ -1,4 +1,4 @@
-module drift
+module github.com/pjovanovic05/drift
 
 go 1.13
 

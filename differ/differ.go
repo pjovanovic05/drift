@@ -2,8 +2,9 @@ package differ
 
 import (
 	"bytes"
-	"drift/checker"
 	"html/template"
+
+	"github.com/pjovanovic05/drift/checker"
 )
 
 type DiffType int
