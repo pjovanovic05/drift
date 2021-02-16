@@ -2,3 +2,7 @@ go.sum
 drift
 *.swp
 .vagrant
+users-report.html
+packages-report.html
+files-report.html
+acls-report.html

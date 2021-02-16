@@ -2,14 +2,14 @@
     "Left": {
         "HostName": "192.168.50.5",
         "Port": 8000,
-        "SSL": true,
+        "SSL": false,
         "KeyVerify": false,
         "Password": "testpass"
     },
     "Right": {
         "HostName": "192.168.50.6",
         "Port": 8000,
-        "SSL": true,
+        "SSL": false,
         "KeyVerify": false,
         "Password": "testpass"
     },
