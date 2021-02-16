@@ -4,14 +4,14 @@
         "Port": 8000,
         "SSL": true,
         "KeyVerify": false,
-        "Password": "pancerfaust"
+        "Password": "testpass"
     },
     "Right": {
         "HostName": "192.168.50.6",
         "Port": 8000,
         "SSL": true,
         "KeyVerify": false,
-        "Password": "pancerfaust"
+        "Password": "testpass"
     },
     "FileCheckerConf": {
         "path": "/",
