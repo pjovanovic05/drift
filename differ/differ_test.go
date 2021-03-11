@@ -1,9 +1,10 @@
 package differ
 
 import (
-	"drift/checker"
 	"strconv"
 	"testing"
+
+	"github.com/pjovanovic05/drift/checker"
 )
 
 func TestShowDiffType(t *testing.T) {
