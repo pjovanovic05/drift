@@ -25,7 +25,7 @@ type StatusRep struct {
 	Progress string
 }
 
-func startServer(port int, password, cert, key string) {
+func startServer(host string, port int, password, cert, key string) {
 	passwd = password
 	router := mux.NewRouter()
 	router.HandleFunc("/checkers/FileChecker/start", startFileChecker).Methods("POST")
@@ -43,9 +43,9 @@ func startServer(port int, password, cert, key string) {
 	// log.Fatal(http.ListenAndServe("0.0.0.0:"+strconv.Itoa(port), router))
 	var err error
 	if len(cert) > 0 && len(key) > 0 {
-		err = http.ListenAndServeTLS("0.0.0.0:"+strconv.Itoa(port), cert, key, router)
+		err = http.ListenAndServeTLS(host+":"+strconv.Itoa(port), cert, key, router)
 	} else {
-		err = http.ListenAndServe("0.0.0.0:"+strconv.Itoa(port), router)
+		err = http.ListenAndServe(host+":"+strconv.Itoa(port), router)
 	}
 
 	if err != nil {

@@ -11,6 +11,7 @@ import (
 
 func main() {
 	isServer := flag.Bool("d", false, "Run as daemon.")
+	host := flag.String("host", "0.0.0.0", "Server hostname or IP on which to listen to.")
 	port := flag.Int("port", 8000, "Server port.")
 	runConfig := flag.String("config", "run-config.json",
 		"JSON config of targets to compare.")
@@ -33,7 +34,7 @@ func main() {
 	}
 
 	if *isServer {
-		startServer(*port, password, *cert, *key)
+		startServer(*host, *port, password, *cert, *key)
 	} else {
 		startClient(*runConfig, *reportFN)
 	}
